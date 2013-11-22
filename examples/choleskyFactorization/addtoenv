@@ -1,0 +1,5 @@
+export OCR_CONFIG=/home/as44/OCR/ocr/machine-configs/default.cfg
+export OCR_HOME=/home/as44/OCR/ocr/ocr-install
+export CNCOCR_HOME=/home/as44/CnC-C/branches/CnC-OCR/cncc_distrib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OCR_HOME}/lib
+export PATH=$PATH:${CNCOCR_HOME}/bin

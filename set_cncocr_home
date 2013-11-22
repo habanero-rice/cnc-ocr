@@ -1,0 +1,2 @@
+export CNCOCR_HOME=`pwd`/cncocr_distrib
+export PATH=${CNCOCR_HOME}/bin:$PATH
