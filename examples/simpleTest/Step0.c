@@ -1,6 +1,6 @@
 
 #include "Common.h"
-void Step0( int k, int size0, Context* context){
+void Step0(int k, int size0, ocrEdtDep_t deps[], Context* context){
 	printf("Step0 %d\n", k);
 	int _index1_0;
 	for(_index1_0 = 0; _index1_0 < size0; _index1_0++){

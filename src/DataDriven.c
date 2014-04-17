@@ -89,7 +89,11 @@ ItemCollectionEntry * allocateEntryIfAbsent(
 			entry->creator = creator;
 			entry->tag = (char*) cnc_malloc(strlen(tag) + 1);
 			strcpy(entry->tag, tag);
-			ocrEventCreate(&(entry->event), OCR_EVENT_STICKY_T, true);
+			// TODO (Nick Vrvilo):
+			// I had to change this from STICKY to IDEMPOTENT in order to
+			// get the PutIfAbsent behavior working at all for my demand-driven
+			// task scheduling in my prime generator example.
+			ocrEventCreate(&(entry->event), OCR_EVENT_IDEM_T, true);
 		}
 		entry->nxt=head;
 
@@ -216,32 +220,26 @@ int getTag(char* tag, int pos)
 
 ocrGuid_t getEdt ( u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
 
-    void *** result = (void***)paramv;
-
-    printf("In the GetEDT.\n");
-
-    **result = (void*)depv[0].ptr;
-
-    return NULL_GUID;
+    return depv[0].guid;
 }
 
-int cncGet(void** result, char* tag, ItemCollectionEntry ** hashmap)
+ocrGuid_t cncGet(char* tag, ItemCollectionEntry ** hashmap)
 {
 
     ocrGuid_t edt_guid;
     ocrGuid_t done_guid;
 
     ocrGuid_t tmp_guid;
-    ocrEdtTemplateCreate(&tmp_guid, getEdt, 1, 1);
+    ocrEdtTemplateCreate(&tmp_guid, getEdt, 0, 1);
 
-    ocrEdtCreate(&edt_guid, tmp_guid, /*paramc=*/1,
-                  /*paramv=*/(u64*) & result, 
+    ocrEdtCreate(&edt_guid, tmp_guid,
+                  /*paramc=*/0, /*paramv=*/NULL,
                   /*depc=*/1, /*depv=*/NULL, 
                   /*properties=*/EDT_PROP_FINISH, /*affinity*/NULL_GUID,
                   /*outEvent=*/&done_guid);
     __registerConsumer(tag, hashmap, edt_guid, 0);
     //ocrEdtExecute(edt_guid);
-
+    return done_guid;
 }
 
 

@@ -87,7 +87,7 @@ public class CncHcGenerator extends AbstractVisitor
 			user_written_main_uses_data_buffer = new StringBuffer();
 		}
 		environment = new step_info_local("env");
-        environment.init = true;
+		environment.init = true;
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -356,7 +356,7 @@ public class CncHcGenerator extends AbstractVisitor
 				//make sure they are the same, else print error
 				scList_old = si_local.identifiers;
 				if(scList_old.size() != scList.size()) { 
-					System.err.println(" Step Execution error: Found step with tag functions of different sizes. Cannot generate code with this contradiction. Translator will exit\n ");
+					System.err.println(" Step Execution error: Found step ("+si_name+") with tag functions of different sizes. Cannot generate code with this contradiction. Translator will exit\n ");
 					System.exit(1);
 				}
 			}
@@ -659,7 +659,7 @@ public class CncHcGenerator extends AbstractVisitor
 					step_name = (String) eg.nextElement();
 					sil = steps_identifiers_gpu.get(step_name);
 				}
-				stream_dispatchhc.println("\tif(!strncmp(stepName, \"" + step_name + "\\0\", " + step_name.length() + ")){");
+				stream_dispatchhc.println("\tif(strcmp(stepName, \"" + step_name + "\") == 0){");
 				int size = sil.identifiers.size(), counter = 0;
 				for(int sili = 0; sili < size; sili++){
 					step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
@@ -1001,65 +1001,75 @@ public class CncHcGenerator extends AbstractVisitor
 	private void generateMakefile()
 	{
 		try{
+			// Step list (updatable)
+			{
+				File file = new File(dir + "steplist.mk");
+				PrintStream out = new PrintStream(file);
+				out.print("STEP_SRCS=");
+				for (Enumeration<String> e = steps_identifiers.keys(); e.hasMoreElements();)
+				{
+					String step_name = e.nextElement();
+					out.print(step_name + ".c ");
+				}
+				out.println();
+				out.close();
+			}
+			// Makefile (only need to generate once)
 			File file = new File(dir + "Makefile");
 			if(!file.exists())
 			{
 				PrintStream out = new PrintStream(file);
 				StringBuilder sb = new StringBuilder();
-				out.println("TARGET="+filename.substring(0, filename.length()-3)+"exec");
-				out.println("CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include");
+				out.println("TARGET="+filename.replaceAll("[.]cnc$", ".exec"));
+				out.println("CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include -D__OCR__");
 				out.println();
-				out.println("compile: pre first second third");
+				out.println("include steplist.mk");
+				out.println("SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)");
+				out.println("OBJS=$(patsubst %.c,%.o,$(SRCS))");
+				out.println();
+				out.println("compile: pre $(TARGET)");
 				out.println();
 				out.println();
 				out.println("#\"invoking translator\"");
 				out.println("pre:");
 				out.println("\t#cncc_t "+filename);
 				out.println();
-				out.println("# building auto-generated files");
-				out.println("first:");
-				out.println("\tgcc $(CFLAGS) -c Context.c");
-				out.println("\tgcc $(CFLAGS) -c Dispatch.c");
+				out.println("# building source files");
+				out.println("%.o: %.c");
+				out.print("\tgcc $(CFLAGS) -c $<");
 				out.println();
-				out.println("# building steps and main");
-				out.println("second:");
-				out.print("\tgcc $(CFLAGS) -c Main.c");
-				for (Enumeration<String> e = steps_identifiers.keys(); e.hasMoreElements();)
-				{
-					String step_name = e.nextElement();
-					out.print(" " + step_name + ".c");
-					sb.append(step_name + ".o ");
-				}
-				out.println(" Common.c");
-				sb.append("Common.o ");
 
 				String linking_compiler = "gcc";	
-				if(steps_identifiers_gpu.size() > 0){
-					StringBuffer cuda_sources = new StringBuffer();
-					out.print("\tgcc $(CFLAGS) -c");
-					for (Enumeration<String> e = steps_identifiers_gpu.keys(); e.hasMoreElements();)
-					{
-						String step_name = e.nextElement();
-						out.print(" " + step_name + ".c");
-						cuda_sources.append(" " + step_name + cudaTail + ".cu");
-						sb.append(step_name + ".o "+step_name + cudaTail + ".o ");
-					}
-					out.println();
-					out.print("\tnvcc $(CFLAGS) -c"+cuda_sources.toString());
-					linking_compiler = "nvcc";
-				}
+				// GPU not supported in OCR
+				// If we get support later, refactor this like the normal steps
+				//if(steps_identifiers_gpu.size() > 0){
+				//	StringBuffer cuda_sources = new StringBuffer();
+				//	out.print("\tgcc $(CFLAGS) -c");
+				//	for (Enumeration<String> e = steps_identifiers_gpu.keys(); e.hasMoreElements();)
+				//	{
+				//		String step_name = e.nextElement();
+				//		out.print(" " + step_name + ".c");
+				//		cuda_sources.append(" " + step_name + cudaTail + ".cu");
+				//		sb.append(step_name + ".o "+step_name + cudaTail + ".o ");
+				//	}
+				//	out.println();
+				//	out.print("\tnvcc $(CFLAGS) -c"+cuda_sources.toString());
+				//	out.println();
+				//	linking_compiler = "nvcc";
+				//}
 
 				out.println();
 				out.println("# linking - creating the executable");
-				out.println("third:");
-				out.println("\t"+linking_compiler+" $(CFLAGS) -L\"$(OCR_HOME)/lib\" \\");
-				out.println("\t       $(CNCOCR_HOME)/lib/DataDriven.o \\");
-				out.println("\t       " + sb.toString() + "\\");
-				out.println("\t       Dispatch.o Context.o Main.o -o $(TARGET) -locr -lxml2 -lpthread");
+				out.println("$(TARGET): $(OBJS)");
+				out.println("\t"+linking_compiler+" $(CFLAGS) \\");
+				out.println("\t       -L\"$(OCR_HOME)/lib\" \\");
+				out.println("\t       -L\"$(CNCOCR_HOME)/lib\" \\");
+				out.println("\t       $(OBJS) \\");
+				out.println("\t       -o $(TARGET) -locr -lcncocr");
 				out.println();
 				out.println();
 				out.println("clean:");
-				out.println("\trm rose_*  *.o $(TARGET) ");
+				out.println("\trm -f $(OBJS) $(TARGET)");
 				out.println("\t#rm Context.c Context.h Dispatch.h Dispatch.c Common.h Common.c");
 			}
 		}catch(Exception e){ System.err.println("Unable to write makefile"); }
@@ -1088,7 +1098,12 @@ public class CncHcGenerator extends AbstractVisitor
 				System.exit(1);
 			}
 			indextype = lttl.tagtype+" ";
-			if(lttl.dim != sil.identifiers.size()){
+			assert(sil != null);
+			if(sil.identifiers == null){
+				System.err.println("Step "+step_name+" is missing its tag info (never used?)\n");
+				System.exit(1);
+			}
+			else if(lttl.dim != sil.identifiers.size()){
 				System.err.println("Step "+step_name+" is prescribed by a tag item with different size\n");
 				System.exit(1);
 			}
@@ -1118,7 +1133,7 @@ public class CncHcGenerator extends AbstractVisitor
 			counter ++;
 		}
 
-		out.append("\tint edt_index=0;");
+		out.append("\n\tint edt_index=0;");
 		
 		StringBuffer number_of_gets = new StringBuffer();
 		for (String input_name : sil.inputs.keySet()){
@@ -1134,8 +1149,11 @@ public class CncHcGenerator extends AbstractVisitor
 				prototypeListIn.clear();
 			}
 		}
-		if(function_name == GET)
+		if(function_name == GET) {
 			step_no_gets.put(step_name, number_of_gets.toString());
+			prototype1.append("ocrEdtDep_t deps[], ");
+			prototype2.append("depv, ");
+		}
 
 		if(prototypeList != null){
 			prototype1.append("Context* context");

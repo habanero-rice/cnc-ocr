@@ -1,6 +1,6 @@
 
 #include "Common.h"
-void Step2( int k, int* Bi0, Context* context){
+void Step2(int k, int* Bi0, ocrEdtDep_t deps[], Context* context){
 	printf("Step2 %d\n", k);
 	int* Ci1;
 	ocrGuid_t Ci1_guid;

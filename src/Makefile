@@ -14,6 +14,7 @@ compile: $(OBJS)
 dist: check_dist compile
 	cp *.h  ${DIST_DIR}/include
 	cp $(OBJS) ${DIST_DIR}/lib
+	ar -rcs ${DIST_DIR}/lib/libcncocr.a $(OBJS)
 
 clean:
 	-rm *.o

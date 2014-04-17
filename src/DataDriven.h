@@ -13,6 +13,7 @@
 
 #ifndef _DATA_DRIVEN_H
 #define _DATA_DRIVEN_H
+#include "ocr.h"
 
 #define TABLE_SIZE 512 /* TODO: Table size should be set by the user when initializing the item collection */
 #define _ROLLBACK_AND_REPLAY 0
@@ -26,7 +27,6 @@
 
 #define LIST_REMOVED 1
 #include "cnc.h"
-#include <ocr.h>
 #include <stdarg.h>
 
 typedef struct ItemCollectionEntry ItemCollectionEntry;
@@ -82,9 +82,14 @@ void  __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap, o
 
 char* createTag(int no_args, ...);
 
+#if __STDC_VERSION__ >= 199901L /* C99-only macros */
+#define TAG_LENGTH(...) (sizeof((u64[]){__VA_ARGS__})/sizeof(u64))
+#define CREATE_TAG(...) createTag(TAG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+#endif
+
 int getTag(char* tag, int pos);
 
-int cncGet(void** result, char* tag, ItemCollectionEntry ** hashmap);
+ocrGuid_t cncGet(char* tag, ItemCollectionEntry ** hashmap);
 
 #endif /* _DATA_DRIVEN_H */
 

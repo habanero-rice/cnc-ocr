@@ -4,7 +4,7 @@
 
 #define FLAGS 0xdead
 
-ocrGuid_t finishEdt ( u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
+ocrGuid_t finishEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     char* step = (char*)paramv[0];
     char* tag = (char*)paramv[1];
     Context* cncGraph = (Context*)paramv[2];
@@ -16,67 +16,68 @@ ocrGuid_t finishEdt ( u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     return NULL_GUID;
 }
 
-int main(int argc, const char** argv)
-{
-	ocrConfig_t ocrConfig;
-	ocrParseArgs(argc, argv, &ocrConfig);
-	ocrInit(&ocrConfig);
-	Context* context = initGraph();
+ocrGuid_t continuationEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
+    Context *context = (Context*)paramv[0];
 
-	//Create and put size	
-	char* tag = createTag(1, 0);
-	int* size;
-	ocrGuid_t size0_guid;
-	ocrDbCreate(&size0_guid, (void **) &size, sizeof(int), FLAGS, NULL_GUID, NO_ALLOC);
-	*size=10;
-	Put(size0_guid, tag, context->size);
+    printf("Finished parallel computation\n\n");
 
-	//Create and put A
-	int*k, i;	
-	for (i=0; i< *size; i++){
-        	ocrGuid_t db_guid;
-        	ocrDbCreate(&db_guid, (void **) &k, sizeof(int), FLAGS, NULL_GUID, NO_ALLOC);
-		*k = i;
-		char* tagl = createTag(1, i);
-		Put(db_guid, tagl, context->Ai);
-    	}
 
-	//Start graph and wait for it to finish
-	ocrGuid_t edt_guid;
-	void* f_args [] = {(void*)"Step0",(void*)tag,(void*)context};
-	ocrGuid_t done_guid, templ_guid;
-	ocrEdtTemplateCreate(&templ_guid, finishEdt, 3, 0);
-	ocrEdtCreate(&edt_guid, templ_guid, /*paramc=*/3, /*paramv*/(u64*)f_args,
-                  /*depc=*/0, /*depv=*/NULL, 
-                  /*properties=*/EDT_PROP_FINISH,/*affinity*/ 0,
+    char* tag2 = createTag(1, 2);
+    int* tmpC = depv[1].ptr;
+    printf("Result=%d (from tag=%s)\n", *tmpC, tag2);
+
+    deleteGraph(context);
+    ocrShutdown();
+
+    return NULL_GUID;
+}
+
+ocrGuid_t mainEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
+    Context* context = initGraph();
+
+    //Create and put size    
+    char* tag = createTag(1, 0);
+    int* size;
+    ocrGuid_t size0_guid;
+    ocrDbCreate(&size0_guid, (void **) &size, sizeof(int), FLAGS, NULL_GUID, NO_ALLOC);
+    *size=10;
+    Put(size0_guid, tag, context->size);
+
+    //Create and put A
+    int*k, i;    
+    for (i=0; i< *size; i++){
+            ocrGuid_t db_guid;
+            ocrDbCreate(&db_guid, (void **) &k, sizeof(int), FLAGS, NULL_GUID, NO_ALLOC);
+        *k = i;
+        char* tagl = createTag(1, i);
+        Put(db_guid, tagl, context->Ai);
+    }
+
+    //Start graph and wait for it to finish
+    ocrGuid_t edt_guid;
+    void* f_args [] = {(void*)"Step0",(void*)tag,(void*)context};
+    ocrGuid_t done_guid, templ_guid;
+    ocrEdtTemplateCreate(&templ_guid, finishEdt, 3, 1);
+    ocrEdtCreate(&edt_guid, templ_guid,
+                  EDT_PARAM_DEF, /*paramv*/(u64*)f_args,
+                  EDT_PARAM_DEF, /*depv=*/NULL, 
+                  /*properties=*/EDT_PROP_FINISH,/*affinity*/ NULL_GUID,
                   /*outEvent=*/&done_guid);
-	ocrWait(done_guid);
-	printf("Finished parallel computation\n\n");
+    ocrGuid_t contTemplGuid, contGuid;
 
+    // Set up output continuation
+    char* tag2 = createTag(1, 2);
+    ocrGuid_t getOutputGuid = cncGet(tag2, context->Ci);
+    ocrEdtTemplateCreate(&contTemplGuid, continuationEdt, 1, 2);
+    ocrGuid_t contEdtDeps[] = { done_guid, getOutputGuid };
+    ocrEdtCreate(&contGuid, contTemplGuid,
+                  EDT_PARAM_DEF, /*paramv*/(u64*)context,
+                  EDT_PARAM_DEF, /*depv=*/contEdtDeps, 
+                  /*properties=*/EDT_PROP_NONE, /*affinity*/ NULL_GUID,
+                  /*outEvent=*/NULL);
 
-	char* tag2 = createTag(1, 2);
-	int* tmpC = 0x1;
-	cncGet((void**) & tmpC, tag2, context->Ci);
-	printf("Rez: %p %s\n", tmpC, tag2);
+    // Start graph
+    ocrAddDependence(NULL_GUID, edt_guid, 0, DB_DEFAULT_MODE);
 
-	//Read results
-	/*int _index2_0;
-	int** Ci2;
-	Ci2 = (int**) malloc ( sizeof(int*) * (*size) );
-
-	for(_index2_0 = 0; _index2_0 < *size; _index2_0++){
-		char* tagCi2 = createTag(1, _index2_0);
-		int* tmpC = 0x1;
-            	cncGet((void**) & tmpC, tagCi2, context->Ci);
-		printf("%p %s\n", tmpC, tagCi2);
-            	//cncGet((void**) & (Ci2[_index2_0]), tagCi2, context->Ci);
-		//printf("%p\n", Ci2[_index2_0]);
-		//printf("%d\n", Ci2[_index2_0][0]);
-	}
-	free(Ci2);
-	*/
-	ocrShutdown();
-	ocrFinalize();
-	deleteGraph(context);
 }
 
