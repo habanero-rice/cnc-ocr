@@ -13,8 +13,6 @@
 #define _CNC_MM_H
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
 #include <ocr.h>
 
 //#define USE_HC_MEMORY_ALLOCATION
@@ -28,9 +26,9 @@ static __inline__ void*  cnc_malloc(size_t msize){
   void* val = malloc(msize);
 #endif
   if (val==NULL) {
-  	printf("Out of memory in cnc_malloc!\n");
-	assert(0); 
-	return NULL;
+    PRINTF("Out of memory in cnc_malloc!\n");
+    assert(0); 
+    return NULL;
   }
   return val;
 }

@@ -14,6 +14,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
+import java.util.Map;
 
 import CnCParser.Ast.AbstractVisitor;
 import CnCParser.Ast.Iaritm_expr;
@@ -481,19 +482,23 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contexth.println();
 			
 			//Generate "struct Context"
-			stream_contexth.println("struct Context");
-			stream_contexth.println("{");    
-			for (Enumeration<String> e = all_items.keys(); e.hasMoreElements();)
-			{
-				String item_collection_name = e.nextElement();
+			stream_contexth.println("typedef struct {");    
+			for (String item_collection_name : all_items.keySet()) {
 				stream_contexth.println("\tItemCollectionEntry ** "+item_collection_name +";");
 			}
-			stream_contexth.println("};");
-			stream_contexth.println("typedef struct Context Context;");
+			stream_contexth.println("} Context;");
 			stream_contexth.println();
 			
+			// Generate item collection entry types
+			for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
+				String collName = item_coll.getKey();
+				String collType = item_coll.getValue().toString();
+				stream_contexth.printf("typedef struct { %s item; ocrGuid_t guid; } %sItem;%n", collType, collName);
+			}
+			stream_contexth.println();
+
 			//Generate "initGraph" and "deleteGraph" function prototypes
-			stream_contexth.println("struct Context* initGraph();");
+			stream_contexth.println("Context* initGraph();");
 			stream_contexth.println("void deleteGraph(Context* CnCGraph);");
 			stream_contexth.println();
 			stream_contexth.println("#endif /*_CONTEXT*/");
@@ -643,7 +648,6 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("#include <string.h>");
 			stream_dispatchhc.println("#include <assert.h>");
 			stream_dispatchhc.println("#include <stdio.h>");
-			stream_dispatchhc.println("#include <stdarg.h>");
 			stream_dispatchhc.println();
 			
 			stream_dispatchhc.println("void prescribeStep(char* stepName, char* stepTag, Context* context){");
@@ -1027,16 +1031,18 @@ public class CncHcGenerator extends AbstractVisitor
 				out.println("SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)");
 				out.println("OBJS=$(patsubst %.c,%.o,$(SRCS))");
 				out.println();
-				out.println("compile: pre $(TARGET)");
+				out.println("# include header globally for user-defined types");
+				out.println("#CFLAGS+=-include=user_types.h");
 				out.println();
+				out.println("compile: $(TARGET)");
 				out.println();
-				out.println("#\"invoking translator\"");
-				out.println("pre:");
-				out.println("\t#cncc_t "+filename);
-				out.println();
+				//out.println("# invoke translator to auto-generate code");
+				//out.println("gen: "+filename);
+				//out.println("\tcncocr_t $<");
+				//out.println();
 				out.println("# building source files");
 				out.println("%.o: %.c");
-				out.print("\tgcc $(CFLAGS) -c $<");
+				out.println("\tgcc $(CFLAGS) -c $<");
 				out.println();
 
 				String linking_compiler = "gcc";	
@@ -1058,19 +1064,20 @@ public class CncHcGenerator extends AbstractVisitor
 				//	linking_compiler = "nvcc";
 				//}
 
-				out.println();
 				out.println("# linking - creating the executable");
 				out.println("$(TARGET): $(OBJS)");
-				out.println("\t"+linking_compiler+" $(CFLAGS) \\");
-				out.println("\t       -L\"$(OCR_HOME)/lib\" \\");
-				out.println("\t       -L\"$(CNCOCR_HOME)/lib\" \\");
-				out.println("\t       $(OBJS) \\");
-				out.println("\t       -o $(TARGET) -locr -lcncocr");
+				out.println("\t"+linking_compiler+" -L\"$(OCR_HOME)/lib\" \\");
+				out.println("\t    -L\"$(CNCOCR_HOME)/lib\" \\");
+				out.println("\t    $(OBJS) \\");
+				out.println("\t    -locr -lcncocr -o$@");
 				out.println();
-				out.println();
+				out.println("# delete binaries");
 				out.println("clean:");
 				out.println("\trm -f $(OBJS) $(TARGET)");
-				out.println("\t#rm Context.c Context.h Dispatch.h Dispatch.c Common.h Common.c");
+				out.println();
+				out.println("# delete binaries and scaffolding files");
+				out.println("squeaky: clean");
+				out.println("\trm {Context,Dispatch,Common}.[ch] steplist.mk");
 			}
 		}catch(Exception e){ System.err.println("Unable to write makefile"); }
 	}
@@ -1151,8 +1158,6 @@ public class CncHcGenerator extends AbstractVisitor
 		}
 		if(function_name == GET) {
 			step_no_gets.put(step_name, number_of_gets.toString());
-			prototype1.append("ocrEdtDep_t deps[], ");
-			prototype2.append("depv, ");
 		}
 
 		if(prototypeList != null){
@@ -1182,6 +1187,7 @@ public class CncHcGenerator extends AbstractVisitor
 		StringBuffer indexlist = new StringBuffer();
 		StringBuffer forloops = new StringBuffer();
 		StringBuffer endforloops = new StringBuffer();
+		String collEntryType = input_name+"Item";
 
 		StringBuffer stars = new StringBuffer();
 		LinkedList<StringBuffer> alloc_list = new LinkedList<StringBuffer>();
@@ -1196,7 +1202,7 @@ public class CncHcGenerator extends AbstractVisitor
 			if(tfl instanceof RangeLocal){
 				stars.append("*");
 				alloc_list.get(no_ranges).append(previousfor);
-				alloc_list.get(no_ranges).append(tabs + input_name + index + for_index + " = (" + itemtype.toString());
+				alloc_list.get(no_ranges).append(tabs + input_name + index + for_index + " = ");
 				previousrange = ((RangeLocal)tfl).stop.toString()+" - "+((RangeLocal)tfl).start.toString();
 				number_of_gets.append("("+previousrange+")*");
 				StringBuffer sbl = new StringBuffer(") * (" + previousrange + ") );\n");
@@ -1230,79 +1236,44 @@ public class CncHcGenerator extends AbstractVisitor
 		//Note: CAN have a range of a collection of itemtype and not reference type.	
 		String newinput_name = "", newinput_type="";
 		String stars_s = stars.toString();
+		String deref = (itemtype instanceof PointerType) ? "" : "*"; // Dereference non-pointer data
 		String other_for_index = for_index.toString();
-		if(function_name.equals (GET))
+		if(function_name.equals (GET)) {
+			newinput_name = input_name + index;
+			newinput_type = itemtype.toString() + deref + " ";
+			// Declare the entry
+			out.append(initial_indent + collEntryType + stars + " " + input_name + index + ";\n");
+			prototype1.append(collEntryType + stars + " " + newinput_name);
+			prototype2.append(newinput_name);
+			// GET: Range
 			if(no_ranges > 0){
-				if(!(itemtype instanceof PointerType)){
-					out.append(initial_indent + itemtype.toString() + "* " + input_name +"temp"+ index + ";\n");
-					//if(function_name.equals (GET)){
-					out.append(initial_indent + itemtype.toString() + stars + " " + input_name + index + ";\n");
-					prototype1.append(itemtype.toString() + stars + " " + input_name + index);
-					prototype2.append(input_name + index);
-					//}
-					other_for_index = "";
-					newinput_name = input_name +"temp"+ index;
-					newinput_type = itemtype.toString() + "* ";
-				}
-				else{
-					//if(function_name.equals (GET)){
-					out.append(initial_indent + itemtype.toString() + stars + " " + input_name + index + ";\n");
-					prototype1.append(itemtype.toString() + stars + " " + input_name + index);
-					prototype2.append(input_name + index);
-					newinput_name = input_name + index;
-					newinput_type = itemtype.toString() + stars + " ";
-				}
-
-				//if(function_name.equals (GET)){
 				for(int i = 0; i < alloc_list.size()-1; i++){
-					alloc.append(alloc_list.get(i).toString() + stars_s + ") malloc ( sizeof(" + itemtype.toString());
-					stars_s = stars_s.substring(0, stars_s.length() - 1);
+					alloc.append(alloc_list.get(i).toString() + "malloc ( sizeof(" + collEntryType);
+					stars_s = stars_s.substring(1);
 					alloc.append(stars_s);
 				}
-				alloc.append(alloc_list.get(alloc_list.size()-1));
+				alloc.append(alloc_list.getLast());
 				out.append(alloc.toString()+"\n");
 				out.append(alloc_endforloops);
-				//}
 			}
-			else{
-				if(!(itemtype instanceof PointerType)){
-					out.append(initial_indent + itemtype.toString() + "* " + input_name + "temp" + index + ";\n");
-					if(function_name.equals (GET))
-						out.append(initial_indent + itemtype.toString() + " " + input_name + index + ";\n");
-					newinput_name = input_name + "temp" + index;
-					newinput_type = itemtype.toString() + "* ";
-				}
-				else{
-					out.append(initial_indent + itemtype.toString() + " " + input_name + index + ";\n");
-					newinput_name = input_name + index;
-					newinput_type = itemtype.toString() + " ";
-				}
-
-				prototype1.append(itemtype.toString() + " " + input_name + index);
-				prototype2.append(input_name + index);
-			}
-
-		out.append(forloops);
-
-		out.append(tabs + "char* tag"+ input_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
-
-		if(function_name.equals (GET))
-		{
-			out.append(tabs + newinput_name + other_for_index+" = ("+newinput_type+")depv[edt_index++].ptr;\n");
 		}
-		else
+
+		out.append(forloops); // START FOR NEST
+
+		// GET: Copy pointer value from ocrEdtDep_t struct
+		if(function_name.equals (GET)) {
+			out.append(String.format("%s%s%s.item = %s(%s)depv[edt_index].ptr;\n",
+			                         tabs, newinput_name, other_for_index, deref, newinput_type));
+			out.append(String.format("%s%s%s.guid = depv[edt_index++].guid;\n",
+			                         tabs, newinput_name, other_for_index));
+		}
+		// step_dependencies: add dependencies (register) using tags
+		else {
+			out.append(tabs + "char* tag"+ input_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
 			out.append(tabs + function_name +"( tag"+ input_name + index +", context->" +input_name + ", edt_guid, edt_index++);\n");
-
-		if(!(itemtype instanceof PointerType) && function_name.equals (GET)){
-			String take_first = null;
-			if(no_ranges == 0)
-				take_first = tabs + input_name + index + for_index + " = " + newinput_name + for_index + "[0];\n";
-			else
-				take_first = tabs + input_name + index + for_index + " = " + newinput_name + "[0];\n";
-			out.append(take_first);
 		}
 
-		out.append(endforloops);
+		out.append(endforloops); // END FOR NEST
 
 		if(prototypeList != null){
 			prototypeList.add(prototype1);

@@ -12,7 +12,6 @@
  */
 
 #include "DataDriven.h"
-#include <ocr.h>
 #include <stdlib.h>
 #include "cnc.h"
 #include <string.h>
@@ -184,7 +183,7 @@ char* createTag(int no_args, ...)
 
 	va_list argp2;
 	va_start(argp2, no_args);
-	vsprintf(tag, &(pattern[0]), argp2);
+	vsprintf(tag, pattern, argp2);
 	va_end(argp2);
 	return tag;
 }
@@ -212,8 +211,8 @@ int getTag(char* tag, int pos)
         if(i == pos){
                 return atoi(r);
         }
-        printf("Could not retrive position %d from tag (%s)\n", pos, tag);
-        assert( 0 );
+        PRINTF("Could not retrive position %d from tag (%s)\n", pos, tag);
+        ASSERT( 0 );
         return -1;
 }
 

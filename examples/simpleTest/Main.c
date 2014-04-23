@@ -1,15 +1,12 @@
 #include "Dispatch.h"
 #include <string.h>
-#include <ocr-lib.h>
-
-#define FLAGS 0xdead
 
 ocrGuid_t finishEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     char* step = (char*)paramv[0];
     char* tag = (char*)paramv[1];
     Context* cncGraph = (Context*)paramv[2];
 
-    printf("In the FinishEDT\n");
+    PRINTF("In the FinishEDT\n");
 
     prescribeStep(step,tag,cncGraph);
 
@@ -19,12 +16,12 @@ ocrGuid_t finishEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
 ocrGuid_t continuationEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     Context *context = (Context*)paramv[0];
 
-    printf("Finished parallel computation\n\n");
+    PRINTF("Finished parallel computation\n\n");
 
 
-    char* tag2 = createTag(1, 2);
+    char* tag2 = CREATE_TAG(2);
     int* tmpC = depv[1].ptr;
-    printf("Result=%d (from tag=%s)\n", *tmpC, tag2);
+    PRINTF("Result=%d (from tag=%s)\n", *tmpC, tag2);
 
     deleteGraph(context);
     ocrShutdown();
@@ -36,10 +33,10 @@ ocrGuid_t mainEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     Context* context = initGraph();
 
     //Create and put size    
-    char* tag = createTag(1, 0);
+    char* tag = CREATE_TAG(0);
     int* size;
     ocrGuid_t size0_guid;
-    ocrDbCreate(&size0_guid, (void **) &size, sizeof(int), FLAGS, NULL_GUID, NO_ALLOC);
+    ocrDbCreate(&size0_guid, (void **) &size, sizeof(int), 0, NULL_GUID, NO_ALLOC);
     *size=10;
     Put(size0_guid, tag, context->size);
 
@@ -47,9 +44,9 @@ ocrGuid_t mainEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     int*k, i;    
     for (i=0; i< *size; i++){
             ocrGuid_t db_guid;
-            ocrDbCreate(&db_guid, (void **) &k, sizeof(int), FLAGS, NULL_GUID, NO_ALLOC);
+            ocrDbCreate(&db_guid, (void **) &k, sizeof(int), 0, NULL_GUID, NO_ALLOC);
         *k = i;
-        char* tagl = createTag(1, i);
+        char* tagl = CREATE_TAG(i);
         Put(db_guid, tagl, context->Ai);
     }
 
@@ -66,7 +63,7 @@ ocrGuid_t mainEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
     ocrGuid_t contTemplGuid, contGuid;
 
     // Set up output continuation
-    char* tag2 = createTag(1, 2);
+    char* tag2 = CREATE_TAG(2);
     ocrGuid_t getOutputGuid = cncGet(tag2, context->Ci);
     ocrEdtTemplateCreate(&contTemplGuid, continuationEdt, 1, 2);
     ocrGuid_t contEdtDeps[] = { done_guid, getOutputGuid };

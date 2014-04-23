@@ -13,7 +13,7 @@
 
 #ifndef _DATA_DRIVEN_H
 #define _DATA_DRIVEN_H
-#include "ocr.h"
+#include <ocr.h>
 
 #define TABLE_SIZE 512 /* TODO: Table size should be set by the user when initializing the item collection */
 #define _ROLLBACK_AND_REPLAY 0
@@ -30,8 +30,6 @@
 #include <stdarg.h>
 
 typedef struct ItemCollectionEntry ItemCollectionEntry;
-//typedef struct Step Step;
-//typedef struct WaitData WaitData;
 
 /* The structure to hold an item in the item collection */
 struct ItemCollectionEntry{
@@ -41,39 +39,7 @@ struct ItemCollectionEntry{
   char creator; /* Who created this entry (could be from a Put or a Get)*/
 };
 
-
-/*
-
-struct Step{
-  int stepID;  a unique ID of the step that needs to be executed
-  char * tag;  The tag of the step that needs to be executed
-  void * context;  Context contains the info about the graph and the collections in the graph
-  Step * volatile nxt;  the next Step in the list, this is used for linking the steps into lists when they are waiting for data
-  WaitData * dependencies;
-  WaitData * start_end;
-  WaitData * failed;
-};
-
-struct WaitData{
-  ItemCollectionEntry ** hashmap;
-  char * tag;
-  void * data;
-  WaitData * volatile nxt;
-};
-
-*/
-
 #define DEPS_BUCKET 3 /* must be >=3 */
-//extern WaitData* big_thingie;
-
-/*void CNC_ASSERT(int exp, char* message){
-  if(!exp){
-    fprintf(stderr, message);
-    fprintf(stderr, "\n");
-    assert(exp);
-  }
-}*/
-
 
 int Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap);
 
@@ -82,10 +48,17 @@ void  __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap, o
 
 char* createTag(int no_args, ...);
 
-#if __STDC_VERSION__ >= 199901L /* C99-only macros */
+/* warning for variadic macro support */
+#if __GNUC__ < 3 && !defined(__clang__) && __STDC_VERSION__ < 199901L && !defined(NO_VARIADIC_MACROS)
+#warning Your compile might not support variadic macros, in which case the CREATE_TAG macro is not supported. You can instead use the createTag function with an explicit arg count. You can disable this warning by setting NO_VARIADIC_MACROS to 0, or disable the macro definitions by setting it to 1.
+#endif
+
+#if !NO_VARIADIC_MACROS
 #define TAG_LENGTH(...) (sizeof((u64[]){__VA_ARGS__})/sizeof(u64))
 #define CREATE_TAG(...) createTag(TAG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #endif
+
+#define CNC_ITEM_TYPE(t) struct { t item; ocrGuid_t guid; }
 
 int getTag(char* tag, int pos);
 
