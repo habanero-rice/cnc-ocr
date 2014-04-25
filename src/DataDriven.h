@@ -29,10 +29,12 @@
 #include "cnc.h"
 #include <stdarg.h>
 
+typedef ocrGuid_t cncHandle_t;
+
 typedef struct ItemCollectionEntry ItemCollectionEntry;
 
 /* The structure to hold an item in the item collection */
-struct ItemCollectionEntry{
+struct ItemCollectionEntry {
   char * tag; /* Tags are NULL-terminated char arrays for now */
   ocrGuid_t event; /* The event representing the data item. Data will be put through the event when it is satisfied */
   ItemCollectionEntry * volatile nxt; /* The next bucket in the hashtable */
@@ -41,9 +43,9 @@ struct ItemCollectionEntry{
 
 #define DEPS_BUCKET 3 /* must be >=3 */
 
-int Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap);
+int Put(cncHandle_t item, char * tag, ItemCollectionEntry ** hashmap);
 
-int PutIfAbsent(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap);
+int PutIfAbsent(cncHandle_t item, char * tag, ItemCollectionEntry ** hashmap);
 void  __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot);
 
 char* createTag(int no_args, ...);
@@ -60,7 +62,9 @@ char* createTag(int no_args, ...);
 
 int getTag(char* tag, int pos);
 
-ocrGuid_t cncGet(char* tag, ItemCollectionEntry ** hashmap);
+cncHandle_t cncGet(char* tag, ItemCollectionEntry ** hashmap);
+
+#define CREATE_ITEM_INSTANCE(guid, ptr, size) DBCREATE(guid, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
 
 #endif /* _DATA_DRIVEN_H */
 

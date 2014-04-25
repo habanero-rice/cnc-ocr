@@ -32,5 +32,5 @@ Finally, run the resulting binary:
 
 A successful run should end with the following line reporting the result:
 
-        Total A: 45
-        Total B: 45
+        Total A [0, 10): 45
+        Total B [0, 10): 45

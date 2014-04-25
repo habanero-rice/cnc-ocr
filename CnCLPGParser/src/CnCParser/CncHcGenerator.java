@@ -485,12 +485,19 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contexth.println("} Context;");
 			stream_contexth.println();
 			
+			stream_contexth.println("");
+			stream_contexth.println();
+
 			// Generate item collection entry types
 			for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
 				String collName = item_coll.getKey();
-				String collType = item_coll.getValue().toString();
-				stream_contexth.printf("typedef struct { %s item; ocrGuid_t guid; } %sItem;%n", collType, collName);
+				String collType = item_coll.getValue().toString().trim();
+				stream_contexth.printf("typedef struct { %s item; cncHandle_t handle; } %sItem;%n", collType, collName);
 			}
+			stream_contexth.println();
+
+			// Generate item instance creation function prototypes
+			writeItemCreators(stream_contexth, true);
 			stream_contexth.println();
 
 			//Generate "initGraph" and "deleteGraph" function prototypes
@@ -506,6 +513,28 @@ public class CncHcGenerator extends AbstractVisitor
 		{
 			System.err.println(ie.getMessage());
 			ie.printStackTrace();
+		}
+	}
+
+	private void writeItemCreators(PrintStream out, boolean prototypesOnly) {
+		for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
+			String collName = item_coll.getKey();
+			String collType = item_coll.getValue().toString().trim() + "*";
+			// Must use pointer types when allocating data blocks
+			if (!(item_coll.getValue() instanceof PointerType))	collType += "*";
+			out.printf("cncHandle_t cncCreateItem_%s(%s item)", collName, collType);
+			// End function prototype or write function body
+			if (prototypesOnly) {
+				out.println(";");
+			}
+			else {
+				out.println(" {");
+				out.println("\tcncHandle_t handle;");
+				out.println("\tCREATE_ITEM_INSTANCE(&handle, (void**)item, sizeof(*item));");
+				out.println("\treturn handle;");
+				out.println("}");
+				out.println();
+			}
 		}
 	}
 
@@ -544,6 +573,9 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("}");
 			stream_contextc.println();
 			
+			// Generate item instance creation functions
+			writeItemCreators(stream_contextc, false);
+
 			//Generate "deleteGraph" method
 			stream_contextc.println("void deleteGraph(Context* CnCGraph)");
 			stream_contextc.println("{"); 
@@ -557,7 +589,7 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("void setEnvOutTag(char *tag, Context *context) {");
 			stream_contextc.println("\tchar *tagPtr;");
 			stream_contextc.println("\tocrGuid_t tagGuid;");
-			stream_contextc.println("\tocrDbCreate(&tagGuid, (void**)&tagPtr, strlen(tag), 0, NULL_GUID, NO_ALLOC);");
+			stream_contextc.println("\tCREATE_ITEM_INSTANCE(&tagGuid, (void**)&tagPtr, strlen(tag));");
 			stream_contextc.println("\tstrcpy(tagPtr, tag);");
 			stream_contextc.println("\tocrEventSatisfy(context->cncEnvOutTag, tagGuid);");
 			stream_contextc.println("}");
@@ -765,6 +797,11 @@ public class CncHcGenerator extends AbstractVisitor
 					stream_mainhc.println("\tPut((void*) val, in_tag, context->"+e_out+");");
 					stream_mainhc.println("\tprescribeStep(\"stepName\", in_tag, context);\n\t*/");
 				}
+
+				stream_mainhc.println("\t/*");
+				stream_mainhc.println("\tchar *envOutTag = createTag(0);");
+				stream_mainhc.println("\tsetEnvOutTag(envOutTag, context);");
+				stream_mainhc.println("\t*/");
 				stream_mainhc.println("}");
 				stream_mainhc.println();
 
@@ -1186,7 +1223,7 @@ public class CncHcGenerator extends AbstractVisitor
 		if(isGetFunction) {
 			out.append(String.format("%s%s%s.item = %s(%s)depv[edt_index].ptr;\n",
 									 tabs, newinput_name, other_for_index, deref, newinput_type));
-			out.append(String.format("%s%s%s.guid = depv[edt_index++].guid;\n",
+			out.append(String.format("%s%s%s.handle = depv[edt_index++].guid;\n",
 									 tabs, newinput_name, other_for_index));
 		}
 		// step_dependencies: add dependencies (register) using tags
@@ -1336,10 +1373,6 @@ public class CncHcGenerator extends AbstractVisitor
 				sil.prototype_withtypes.append(", " + itemtype.toString() + extra_stars + "* " + output_name + index);
 				sil.prototype_withouttypes.append(", " + output_name + index);
 			}
-			out.append(forloops);
-			out.append(tabs + output_name + index + for_index + " = (" + itemtype.toString() + "* ) malloc ( 1 * sizeof (" + 
-					itemtype.toString() + ") );\n");
-			out.append(endforloops);
 		}
 		else if(!fullauto)
 			out.append(initial_indent + itemtype.toString() + " " + output_name + index + ranges + ";\n");
@@ -1363,10 +1396,12 @@ public class CncHcGenerator extends AbstractVisitor
 			
 		}
 		puts.append(forloops);
-		puts.append(tabs+"ocrGuid_t "+output_name + index+"_guid;\n");
-		puts.append(tabs+"ocrDbCreate(&"+output_name + index+"_guid, (void **) &"+output_name + index + for_index+", sizeof(int), 0xdead, NULL_GUID, NO_ALLOC);\n");
+		puts.append(String.format("%scncHandle_t %s%s_handle = cncCreateItem_%s(&%s%s%s);%n"+
+		                          "%s// TODO: *%s%s%s = ???;%n",
+		                          tabs, output_name, index, output_name, output_name, index, for_index,
+		                          tabs, output_name, index, for_index));
 		puts.append(tabs + "char* tag"+ output_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
-		puts.append(tabs + "Put(" + output_name + index + "_guid" + ", tag"+ output_name + index +", context->" +output_name + ");\n");
+		puts.append(tabs + "Put(" + output_name + index + "_handle" + ", tag"+ output_name + index +", context->" +output_name + ");\n");
 		puts.append(endforloops);
 		puts.append("\n");
 	}
