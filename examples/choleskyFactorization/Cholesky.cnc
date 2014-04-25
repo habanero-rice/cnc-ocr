@@ -61,5 +61,5 @@
 //env -> [ Lkji ], [ tileSize ], [ numTiles ], < singletonTag > ;
  
 // Return to the caller
-//[ Lkji ] -> env;
+[ Lkji: {0..dim} ] -> ( env: dim );
 

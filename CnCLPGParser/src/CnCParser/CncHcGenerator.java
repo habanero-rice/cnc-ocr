@@ -14,6 +14,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import CnCParser.Ast.AbstractVisitor;
@@ -325,9 +326,9 @@ public class CncHcGenerator extends AbstractVisitor
 			scList_old = scList;
 			if(scList.size() == 0){
 				System.err.println(" Step Execution warning: Steps should have a list of names (preferably with types as well) " +
-						"representing the format of the tag prescribing them. " +
+						"representing the format of the tag prescribing them.\n" +
 						default_err + 
-						"You, the user, will have to write by hand what I cannot generate (e.g. the get functions in Common.c)."+
+						"\nYou, the user, will have to write by hand what I cannot generate (e.g. the get functions in Common.c).\n"+
 						"Please provide accurate tag functions to avoid this."+
 						"\n");
 				all_tag_functions_present = false;
@@ -692,6 +693,7 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("\tfor (i=0; i<argc; i++) argv[i] = argBytes+packedArgs[i+1];");
 			stream_dispatchhc.println("\t// Run user's cncEnvIn function");
 			stream_dispatchhc.println("\tcncEnvIn(argc, argv, (Context*)paramv[0]);");
+			stream_dispatchhc.println("\tFREE(argv);");
 			stream_dispatchhc.println("\treturn NULL_GUID;");
 			stream_dispatchhc.println("}");
 			stream_dispatchhc.println("");
@@ -798,8 +800,12 @@ public class CncHcGenerator extends AbstractVisitor
 					stream_mainhc.println("\tprescribeStep(\"stepName\", in_tag, context);\n\t*/");
 				}
 
+
+				List<Object> envIds = (List<Object>)environment.identifiers.getList();
 				stream_mainhc.println("\t/*");
-				stream_mainhc.println("\tchar *envOutTag = createTag(0);");
+				stream_mainhc.printf("\tchar *envOutTag = createTag(%s", envIds.size());
+				for (Object id : envIds) stream_mainhc.printf(", %s", id);
+				stream_mainhc.println(");");
 				stream_mainhc.println("\tsetEnvOutTag(envOutTag, context);");
 				stream_mainhc.println("\t*/");
 				stream_mainhc.println("}");
@@ -1066,7 +1072,14 @@ public class CncHcGenerator extends AbstractVisitor
 			indextype = "int ";
 
 		//identifier can be a range now, get them separately
-		int size = sil.identifiers.size(), counter = 0;
+		if (sil.identifiers == null) {
+			System.err.print("ERROR: Missing tag function for ");
+			if (sil == environment) System.out.println("environment");
+			else System.out.printf("step %s%n", step_name);
+			System.exit(-1);
+		}
+		int size = sil.identifiers.size();
+		int counter = 0;
 		for(int sili = 0; sili < size; sili++){
 			step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
 			if(sc.getname() != null){
