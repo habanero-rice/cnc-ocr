@@ -13,9 +13,9 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 64:  step_component ::= t_type T_NAME$name
- *<li>Rule 65:  step_component ::= T_NAME$name
- *<li>Rule 66:  step_component ::= { T_NAME$start_range .. T_NAME$end_range }
+ *<li>Rule 66:  step_component ::= t_type T_NAME$name
+ *<li>Rule 67:  step_component ::= T_NAME$name
+ *<li>Rule 68:  step_component ::= { T_NAME$start_range .. T_NAME$end_range }
  *</b>
  */
 public class step_component extends Ast implements Istep_component

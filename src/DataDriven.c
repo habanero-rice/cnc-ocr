@@ -23,18 +23,18 @@
  * Test if two tags are equal. Right now, we are only doing string comparisons since we only allow strings for tags
  */
 int equals(unsigned char * tag1, unsigned char * tag2) {
-	return (!strcmp(tag1, tag2));
+    return (!strcmp(tag1, tag2));
 }
 
 /* Hash function implementation. Fast and pretty good */
 unsigned long hash_function(unsigned char *str) {
-	unsigned long hash = 5381;
-	int c;
+    unsigned long hash = 5381;
+    int c;
 
-	while (c = *str++)
-		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
-	return hash;
+    return hash;
 }
 
 /* get an entry from the item collection, or create and insert one 
@@ -43,113 +43,113 @@ unsigned long hash_function(unsigned char *str) {
  * puts are not allowed
  */
 ItemCollectionEntry * allocateEntryIfAbsent(
-		ItemCollectionEntry * volatile * hashmap, unsigned char * tag, char creator, char isSingleAssignment) {
-	int index = (hash_function(tag)) % TABLE_SIZE;
-	ItemCollectionEntry * volatile current = hashmap[index];
+        ItemCollectionEntry * volatile * hashmap, unsigned char * tag, char creator, char isSingleAssignment) {
+    int index = (hash_function(tag)) % TABLE_SIZE;
+    ItemCollectionEntry * volatile current = hashmap[index];
 
-	/* ACHTUNG: pointer arithmetic! This SHOULD give the address of the i'th element of the hashmap array, but maybe there is a more elegant way to do that */
-	ItemCollectionEntry * volatile * currentLocation = &hashmap[index];
-	ItemCollectionEntry * volatile head = current;
-	ItemCollectionEntry * volatile tail = NULL;
+    /* ACHTUNG: pointer arithmetic! This SHOULD give the address of the i'th element of the hashmap array, but maybe there is a more elegant way to do that */
+    ItemCollectionEntry * volatile * currentLocation = &hashmap[index];
+    ItemCollectionEntry * volatile head = current;
+    ItemCollectionEntry * volatile tail = NULL;
 
-	ItemCollectionEntry * entry = NULL;
+    ItemCollectionEntry * entry = NULL;
 
-	while (1) {
-		/* traverse the buckets in the table to get to the last one */
-		while (current != tail) {
-			if (equals(current->tag, tag)) {
-				/* deallocate the entry we eagerly allocated in a previous iteration of the outer while(1) loop */
-				if (entry != NULL){
-					ocrEventDestroy(entry->event);
-					cnc_free(entry);
-				}
-					
-				if ((current->creator == CNC_PUT_ENTRY) && (creator == CNC_PUT_ENTRY)) {
-					if (isSingleAssignment)
-					{	
-						CNC_ASSERT(0, "Single assignment rule violated in item collection put\n");
-					}
-					else
-						return NULL;
-				}
-				return current; /* just return the table entry if it already has the tag */
-			}
-			current = current->nxt;
-		}
+    while (1) {
+        /* traverse the buckets in the table to get to the last one */
+        while (current != tail) {
+            if (equals(current->tag, tag)) {
+                /* deallocate the entry we eagerly allocated in a previous iteration of the outer while(1) loop */
+                if (entry != NULL){
+                    ocrEventDestroy(entry->event);
+                    cnc_free(entry);
+                }
+                    
+                if ((current->creator == CNC_PUT_ENTRY) && (creator == CNC_PUT_ENTRY)) {
+                    if (isSingleAssignment)
+                    {    
+                        CNC_ASSERT(0, "Single assignment rule violated in item collection put\n");
+                    }
+                    else
+                        return NULL;
+                }
+                return current; /* just return the table entry if it already has the tag */
+            }
+            current = current->nxt;
+        }
 
-		/* current has to be NULL now */
-/*		CNC_ASSERT(current == tail,
-				"Current pointer is not NULL in the allocateEntryIfAbstent function\n");
+        /* current has to be NULL now */
+/*        CNC_ASSERT(current == tail,
+                "Current pointer is not NULL in the allocateEntryIfAbstent function\n");
 */
-		/* allocate a new entry if this is the first time we are going to try and insert a new entry to the end of the bucket list */
-		if (entry == NULL) {
-			entry = (ItemCollectionEntry *) cnc_malloc(
-					sizeof(ItemCollectionEntry));
-			entry->creator = creator;
-			entry->tag = (char*) cnc_malloc(strlen(tag) + 1);
-			strcpy(entry->tag, tag);
-			// TODO (Nick Vrvilo):
-			// I had to change this from STICKY to IDEMPOTENT in order to
-			// get the PutIfAbsent behavior working at all for my demand-driven
-			// task scheduling in my prime generator example.
-			ocrEventCreate(&(entry->event), OCR_EVENT_IDEM_T, true);
-		}
-		entry->nxt=head;
+        /* allocate a new entry if this is the first time we are going to try and insert a new entry to the end of the bucket list */
+        if (entry == NULL) {
+            entry = (ItemCollectionEntry *) cnc_malloc(
+                    sizeof(ItemCollectionEntry));
+            entry->creator = creator;
+            entry->tag = (char*) cnc_malloc(strlen(tag) + 1);
+            strcpy(entry->tag, tag);
+            // TODO (Nick Vrvilo):
+            // I had to change this from STICKY to IDEMPOTENT in order to
+            // get the PutIfAbsent behavior working at all for my demand-driven
+            // task scheduling in my prime generator example.
+            ocrEventCreate(&(entry->event), OCR_EVENT_IDEM_T, true);
+        }
+        entry->nxt=head;
 
-		/* try to insert the new entry into the _first_ position in a bucket of the table */
-		if (__sync_bool_compare_and_swap(currentLocation, head, entry)) {
-			return entry;
-		}
+        /* try to insert the new entry into the _first_ position in a bucket of the table */
+        if (__sync_bool_compare_and_swap(currentLocation, head, entry)) {
+            return entry;
+        }
 
-		/* CAS failed, which means that someone else inserted the new entry into the table while we were trying to do so, we need to try again */
-		current = hashmap[index]; //do not update tail anymore if deletes are inserted.
-		tail = head;
-		head = current;
-	}
+        /* CAS failed, which means that someone else inserted the new entry into the table while we were trying to do so, we need to try again */
+        current = hashmap[index]; //do not update tail anymore if deletes are inserted.
+        tail = head;
+        head = current;
+    }
 
-	CNC_ASSERT(0, "Arrived at the end of allocateEntryIfAbsent in DataDriven.c"); /* we should never get here */
-	return NULL;
+    CNC_ASSERT(0, "Arrived at the end of allocateEntryIfAbsent in DataDriven.c"); /* we should never get here */
+    return NULL;
 }
 
 /* Putting an item into the hashmap */
 int _Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap, char isSingleAssignment) {
-	
-	CNC_ASSERT(tag != NULL, "Put - ERROR================%p\n");
+    
+    CNC_ASSERT(tag != NULL, "Put - ERROR================%p\n");
 
-	/* allocateEntryIfAbsent checks for multiple puts using the "CNC_PUT_ENTRY" parameter */
-	ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, CNC_PUT_ENTRY, isSingleAssignment);
+    /* allocateEntryIfAbsent checks for multiple puts using the "CNC_PUT_ENTRY" parameter */
+    ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, CNC_PUT_ENTRY, isSingleAssignment);
 
-	/* the returned placeholder can be NULL only when isSingleAssignment is false. 
-	   in which case, the item was Put previously, so the current Put returns */
-	if(entry == NULL && !isSingleAssignment)
-		return PUT_FAIL;
-	/* Now, we have the correct placeholder (either inserted by us or by a Get function) */
+    /* the returned placeholder can be NULL only when isSingleAssignment is false. 
+       in which case, the item was Put previously, so the current Put returns */
+    if(entry == NULL && !isSingleAssignment)
+        return PUT_FAIL;
+    /* Now, we have the correct placeholder (either inserted by us or by a Get function) */
 
-	/* Inserting the item now boils down to just satisfying the event with a data block of the item. */
-	ocrEventSatisfy(entry->event, item);
+    /* Inserting the item now boils down to just satisfying the event with a data block of the item. */
+    ocrEventSatisfy(entry->event, item);
 
-	return PUT_SUCCESS;
+    return PUT_SUCCESS;
 }
 
 int Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap){
-	int ret = 0;
-	ret = _Put(item, tag, hashmap, SINGLE_ASSIGNMENT_ENFORCED);
-	return ret;
+    int ret = 0;
+    ret = _Put(item, tag, hashmap, SINGLE_ASSIGNMENT_ENFORCED);
+    return ret;
 }
 
 int PutIfAbsent(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap){
-	int ret = 0;
-	ret = _Put(item, tag, hashmap, SKIP_SINGLE_ASSIGNMENT);
-	return ret;
+    int ret = 0;
+    ret = _Put(item, tag, hashmap, SKIP_SINGLE_ASSIGNMENT);
+    return ret;
 }
 
 /* Register a step as a consumer of the item in the hasmap */
 
 void __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap,
-		ocrGuid_t stepToRegister, u32 slot) {
-	ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, CNC_GET_ENTRY, SINGLE_ASSIGNMENT_ENFORCED);
+        ocrGuid_t stepToRegister, u32 slot) {
+    ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, CNC_GET_ENTRY, SINGLE_ASSIGNMENT_ENFORCED);
 
-	ocrAddDependence(entry->event, stepToRegister, slot, DB_DEFAULT_MODE);
+    ocrAddDependence(entry->event, stepToRegister, slot, DB_DEFAULT_MODE);
 
 }
 
@@ -157,35 +157,35 @@ void __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap,
 
 char* createTag(int no_args, ...)
 {
-	va_list argp;
-	va_start(argp, no_args);
-	int count = 0;
-	int n = no_args, i;
-	for( ; n>=0; n--)
-	{
-		int k = va_arg(argp, int);
-		if (k == 0) count++;
-		else while(k>0){  k = k/10; count++; }
-		count++;
-	}
-	va_end(argp);
+    va_list argp;
+    va_start(argp, no_args);
+    int count = 0;
+    int n = no_args, i;
+    for( ; n>=0; n--)
+    {
+        int k = va_arg(argp, int);
+        if (k == 0) count++;
+        else while(k>0){  k = k/10; count++; }
+        count++;
+    }
+    va_end(argp);
 
-	n = no_args;
-	char* tag = (char*) cnc_malloc ( (count+1) *sizeof(char) );
+    n = no_args;
+    char* tag = (char*) cnc_malloc ( (count+1) *sizeof(char) );
 
-	char pattern[3*n];
-	for(i=0; i<n; i++){
-		pattern[3*i] = '%';
-		pattern[3*i+1] = 'd';
-		pattern[3*i+2] = ' ';
-	}
-	pattern[3*n-1] = '\0';
+    char pattern[3*n];
+    for(i=0; i<n; i++){
+        pattern[3*i] = '%';
+        pattern[3*i+1] = 'd';
+        pattern[3*i+2] = ' ';
+    }
+    pattern[3*n-1] = '\0';
 
-	va_list argp2;
-	va_start(argp2, no_args);
-	vsprintf(tag, pattern, argp2);
-	va_end(argp2);
-	return tag;
+    va_list argp2;
+    va_start(argp2, no_args);
+    vsprintf(tag, pattern, argp2);
+    va_end(argp2);
+    return tag;
 }
 
 int getTag(char* tag, int pos)
@@ -240,6 +240,3 @@ ocrGuid_t cncGet(char* tag, ItemCollectionEntry ** hashmap)
     //ocrEdtExecute(edt_guid);
     return done_guid;
 }
-
-
-

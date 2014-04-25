@@ -13,7 +13,7 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 82:  attribute ::= T_NAME$name = T_NAME$value
+ *<li>Rule 84:  attribute ::= T_NAME$name = T_NAME$value
  *</b>
  */
 public class VariableAttribute extends Ast implements Iattribute

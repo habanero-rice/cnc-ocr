@@ -13,17 +13,12 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 68:  t_type ::= STRUCT T_NAME
+ *<li>Rule 57:  step_instance_name ::= T_ENV
  *</b>
  */
-public class t_type2 extends Ast implements It_type
+public class step_instance_name0 extends AstToken implements Istep_instance_name
 {
-    public t_type2(IToken leftIToken, IToken rightIToken)
-    {
-        super(leftIToken, rightIToken);
-
-        initialize();
-    }
+    public step_instance_name0(IToken token) { super(token); initialize(); }
 
     public void accept(IAstVisitor v)
     {

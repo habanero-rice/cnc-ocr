@@ -6,8 +6,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 // item collection declarations
 
-[ int* CollA ];
-[ int  CollB ];
+[ int* CollA  ];
+[ int  CollB  ];
+[ int* TotalA ];
+[ int  TotalB ];
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -17,21 +19,27 @@
 
 < int [2] SATag > ;  
 < int [2] SBTag > ;  
+< int [2] envOut > ;  
 
 ////////////////////////////////////////////////////////////////////////////////
 // Step Prescriptions
 
 < SATag > :: ( StepA ) ;	
 < SBTag > :: ( StepB ) ;	
+< envOut > :: ( env ) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Input output relationships
 
-[ CollA : {i..j} ] -> ( StepA : i, j );
-[ CollB : {i..j} ] -> ( StepB : i, j );
+[ CollA: {i..j} ] -> ( StepA: i, j ) -> [ TotalA: i, j ];
+[ CollB: {i..j} ] -> ( StepB: i, j ) -> [ TotalB: i, j ];
 
 // Write graph inputs and start steps
 env -> [ CollA: {0..100} ];
 env -> [ CollB: {0..100} ];
+env -> < SATag: x, y >;
+env -> < SBTag: x, y >;
 
 // Return outputs to the caller
+[ TotalA: x, y ] -> ( env: x, y );
+[ TotalB: x, y ] -> ( env: x, y );

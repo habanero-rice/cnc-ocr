@@ -50,15 +50,13 @@ char* createTag(int no_args, ...);
 
 /* warning for variadic macro support */
 #if __GNUC__ < 3 && !defined(__clang__) && __STDC_VERSION__ < 199901L && !defined(NO_VARIADIC_MACROS)
-#warning Your compile might not support variadic macros, in which case the CREATE_TAG macro is not supported. You can instead use the createTag function with an explicit arg count. You can disable this warning by setting NO_VARIADIC_MACROS to 0, or disable the macro definitions by setting it to 1.
+#warning Your compiler might not support variadic macros, in which case the CREATE_TAG macro is not supported. You can instead use the createTag function with an explicit arg count. You can disable this warning by setting NO_VARIADIC_MACROS to 0, or disable the macro definitions by setting it to 1.
 #endif
 
 #if !NO_VARIADIC_MACROS
 #define TAG_LENGTH(...) (sizeof((u64[]){__VA_ARGS__})/sizeof(u64))
 #define CREATE_TAG(...) createTag(TAG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #endif
-
-#define CNC_ITEM_TYPE(t) struct { t item; ocrGuid_t guid; }
 
 int getTag(char* tag, int pos);
 

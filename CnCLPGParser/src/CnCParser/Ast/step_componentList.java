@@ -13,11 +13,11 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 59:  step_description_opt ::= step_description
- *<li>Rule 60:  step_description_opt ::= $Empty
- *<li>Rule 61:  step_description ::= : step_component_list
- *<li>Rule 62:  step_component_list ::= step_component
- *<li>Rule 63:  step_component_list ::= step_component_list , step_component
+ *<li>Rule 61:  step_description_opt ::= step_description
+ *<li>Rule 62:  step_description_opt ::= $Empty
+ *<li>Rule 63:  step_description ::= : step_component_list
+ *<li>Rule 64:  step_component_list ::= step_component
+ *<li>Rule 65:  step_component_list ::= step_component_list , step_component
  *</b>
  */
 public class step_componentList extends AbstractAstList implements Istep_description_opt, Istep_description, Istep_component_list
@@ -34,9 +34,9 @@ public class step_componentList extends AbstractAstList implements Istep_descrip
         super((Ast) _step_component, leftRecursive);
     }
 
-    public void addElement(step_component _step_component)
+    public void add(step_component _step_component)
     {
-        super.addElement((Ast) _step_component);
+        super.add((Ast) _step_component);
     }
 
     public boolean equals(Object o)

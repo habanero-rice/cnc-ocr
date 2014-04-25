@@ -31,9 +31,9 @@ public class statementList extends AbstractAstList implements Istatements
         super((Ast) _statement, leftRecursive);
     }
 
-    public void addElement(Istatement _statement)
+    public void add(Istatement _statement)
     {
-        super.addElement((Ast) _statement);
+        super.add((Ast) _statement);
     }
 
     public boolean equals(Object o)

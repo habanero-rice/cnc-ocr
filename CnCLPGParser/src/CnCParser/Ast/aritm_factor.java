@@ -114,21 +114,21 @@ public class aritm_factor extends Ast implements Iaritm_factor
     
     @Override
     public String toString(){
-    	StringBuilder toret =  new StringBuilder();
-    	if(_new_name != null){
-    		toret.append(_new_name);
-    		if(_index != null) toret.append("["+_index.toString()+"]");
-    	}
-    	else if(_name != null){
-    		toret.append(_name);
-    		if(_index != null) toret.append("["+_index.toString()+"]");
-    	}
-    	else if(_val != null){
-    		toret.append(_val);
-    	}
-    	//else throw an error? (grammar does not accept empty)
-    	
-    	return toret.toString();
+        StringBuilder toret =  new StringBuilder();
+        if(_new_name != null){
+            toret.append(_new_name);
+            if(_index != null) toret.append("["+_index.toString()+"]");
+        }
+        else if(_name != null){
+            toret.append(_name);
+            if(_index != null) toret.append("["+_index.toString()+"]");
+        }
+        else if(_val != null){
+            toret.append(_val);
+        }
+        //else throw an error? (grammar does not accept empty)
+        
+        return toret.toString();
     }
 }
 

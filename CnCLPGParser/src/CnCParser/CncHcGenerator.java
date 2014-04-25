@@ -12,7 +12,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -43,15 +43,14 @@ import CnCParser.Ast.tag_type;
 
 public class CncHcGenerator extends AbstractVisitor 
 {
-	Hashtable<String, ArrayList<String>> tag_steps = new Hashtable<String, ArrayList<String>>(); // List of steps prescribed by each tag
+	Map<String, ArrayList<String>> tag_steps = new LinkedHashMap<String, ArrayList<String>>(); // List of steps prescribed by each tag
 	
-	Hashtable<String, Iitem_type> all_items = new Hashtable<String, Iitem_type>(); //all ItemCollections names and their types
-	Hashtable<String, tag_type_local> all_tags = new Hashtable<String, tag_type_local>(); // all TagCollections names and their types
-	Hashtable<String, step_info_local> steps_identifiers = new Hashtable<String, step_info_local>();//all CPU StepCollections and their associated information (inputs, outputs, affinites...)
-	Hashtable<String, step_info_local> steps_identifiers_gpu = new Hashtable<String, step_info_local>();//all GPU StepCollections and their associated information (inputs, outputs, affinites...)
-	Hashtable<String, String> step_no_gets = new Hashtable<String, String>();//code computing how many dependences each step waits on.
-	//Note: It is worth keeping CPU and GPU steps separate for this particular translator
+	Map<String, Iitem_type> all_items = new LinkedHashMap<String, Iitem_type>(); //all ItemCollections names and their types
+	Map<String, tag_type_local> all_tags = new LinkedHashMap<String, tag_type_local>(); // all TagCollections names and their types
+	Map<String, step_info_local> steps_identifiers = new LinkedHashMap<String, step_info_local>();//all CPU StepCollections and their associated information (inputs, outputs, affinites...)
+	Map<String, String> step_no_gets = new LinkedHashMap<String, String>();//code computing how many dependences each step waits on.
 	step_info_local environment = null;
+	StringBuilder envOutFunc = new StringBuilder();
 	
 	String GET = "CNC_GET";
 	String pragma_suspend = "#pragma hc continuable";
@@ -66,9 +65,9 @@ public class CncHcGenerator extends AbstractVisitor
 	boolean all_tag_functions_present = true;
 	
 	boolean fullauto;
-	StringBuffer user_written_alloc_methods_buffer;
-	StringBuffer user_written_step_methods_buffer;
-	StringBuffer user_written_main_uses_data_buffer;
+	StringBuilder user_written_alloc_methods_buffer;
+	StringBuilder user_written_step_methods_buffer;
+	StringBuilder user_written_main_uses_data_buffer;
 
 	public CncHcGenerator(String filename_, String dir_, boolean fullauto_){
 		super();
@@ -83,12 +82,12 @@ public class CncHcGenerator extends AbstractVisitor
 		}
 		fullauto = fullauto_;
 		if(fullauto){
-			user_written_alloc_methods_buffer = new StringBuffer();
-			user_written_step_methods_buffer = new StringBuffer();
-			user_written_main_uses_data_buffer = new StringBuffer();
+			user_written_alloc_methods_buffer = new StringBuilder();
+			user_written_step_methods_buffer = new StringBuilder();
+			user_written_main_uses_data_buffer = new StringBuilder();
 		}
 		environment = new step_info_local("env");
-		environment.init = true;
+		//environment.init = true;
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -104,25 +103,21 @@ public class CncHcGenerator extends AbstractVisitor
 
 	private class step_info_local{
 		String step_name;
-		StringBuffer prototype_withtypes, prototype_withouttypes;
+		StringBuilder prototype_withtypes, prototype_withouttypes;
 		step_componentList identifiers; //keep the names of the first encounter; second encounter - match/change the names to the first
 		String prescribing_tag;
-		Hashtable<String, InputCollectionLocal> inputs;
-		Hashtable<String, OutputCollectionLocal> outputs;
-		Hashtable<String, TagCollectionLocal> tags;
+		Map<String, InputCollectionLocal> inputs;
+		Map<String, OutputCollectionLocal> outputs;
+		Map<String, TagCollectionLocal> tags;
 		step_affinityList affinityList = null;
-		boolean init = false, isGPU;
+		boolean init = false;
 		public step_info_local(String step_name){
 			this.step_name = step_name;
-			inputs = new Hashtable<String, InputCollectionLocal>();
-			outputs = new Hashtable<String, OutputCollectionLocal>();
-			tags = new Hashtable<String, TagCollectionLocal>();
-			isGPU = false;
-			prototype_withtypes = new StringBuffer(); 
-			prototype_withouttypes = new StringBuffer();
-		}
-		public step_info_local(String step_name, boolean isGPU){
-			this(step_name); this.isGPU=isGPU;
+			inputs = new LinkedHashMap<String, InputCollectionLocal>();
+			outputs = new LinkedHashMap<String, OutputCollectionLocal>();
+			tags = new LinkedHashMap<String, TagCollectionLocal>();
+			prototype_withtypes = new StringBuilder(); 
+			prototype_withouttypes = new StringBuilder();
 		}
 	}
 
@@ -248,22 +243,22 @@ public class CncHcGenerator extends AbstractVisitor
 		if (step_list == null)
 			step_list = new ArrayList<String>();
 
-		Hashtable<String, step_info_local> steps_identifiers_local;
+		Map<String, step_info_local> steps_identifiers_local;
 		for (int i = 0; i < step_instance_list.size(); i++){
 			step_instance_aff si = (step_instance_aff) step_instance_list.getstep_instance_affAt(i);
 			String si_name = si.getname().toString();
 			step_list.add(si_name);
-			boolean isGPU=false;
-			if(si.getstep_type().toString().equals("("))
-				steps_identifiers_local = steps_identifiers;
-			else{
-				steps_identifiers_local = steps_identifiers_gpu;
-				isGPU=true;
-			}
+			steps_identifiers_local = steps_identifiers;
 			step_info_local si_local = steps_identifiers_local.get(si_name);
 			if(si_local == null){
-				si_local = new step_info_local(si_name, isGPU);
-				steps_identifiers_local.put(si_name, si_local);
+				// TODO - this is my ad-hoc way of handling env (there should be a better way)
+				if (si.getname().toString().equals("env")) {
+					si_local = environment;
+				}
+				else {
+					si_local = new step_info_local(si_name);
+					steps_identifiers_local.put(si_name, si_local);
+				}
 				step_affinityList sAffList = si.getstep_description_aff_opt();
 				if(sAffList.size() > 0){
 					si_local.affinityList = sAffList;
@@ -323,14 +318,8 @@ public class CncHcGenerator extends AbstractVisitor
 			step_instance si = (step_instance) n.getstep_instance();
 			String si_name = si.getname().toString();
 			
-			Hashtable<String, step_info_local> steps_identifiers_local;
-			boolean isGPU=false;
-			if(si.getstep_type().toString().equals("("))
-				steps_identifiers_local = steps_identifiers;
-			else{
-				steps_identifiers_local = steps_identifiers_gpu;
-				isGPU=true;
-			}
+			Map<String, step_info_local> steps_identifiers_local;
+			steps_identifiers_local = steps_identifiers;
 
 			scList = si.getstep_description_opt();
 			scList_old = scList;
@@ -344,10 +333,16 @@ public class CncHcGenerator extends AbstractVisitor
 				all_tag_functions_present = false;
 			}
 
-			si_local = steps_identifiers_local.get(si_name);
+			// TODO - this is my ad-hoc way of handling env (there should be a better way)
+			if (si.getname().toString().equals("env")) {
+				si_local = environment;
+			}
+			else {
+				si_local = steps_identifiers_local.get(si_name);
+			}
 			if(si_local == null || si_local.init == false){
 				if(si_local == null){
-					si_local = new step_info_local(si_name, isGPU);
+					si_local = new step_info_local(si_name);
 					steps_identifiers_local.put(si_name, si_local);
 				}
 				si_local.identifiers = scList;
@@ -366,7 +361,7 @@ public class CncHcGenerator extends AbstractVisitor
 			si_local = environment;
 
 		// get all the input collections
-		for (int i = 0; i < inputList.size(); i++){			    
+		for (int i = 0; i < inputList.size(); i++){				
 			Iinstance instance = inputList.getinstanceAt(i);
 			if (instance instanceof item_instance){
 				String instanceName = ((item_instance) instance).getitem_definition().getname().toString();
@@ -451,9 +446,6 @@ public class CncHcGenerator extends AbstractVisitor
 		//Generate the Context init function: context.c
 		generateContextC();
 
-		//Generate a stub for main
-		generateMainStubHC();
-
 		//Generate step stubs, common.c and common.h
 		generateSteps();
 		
@@ -462,6 +454,9 @@ public class CncHcGenerator extends AbstractVisitor
 		
 		//Generate the prescribe function: dispatch.c (must follow generation of common.c)
 		generateDispatchC();
+
+		//Generate a stub for main
+		generateMainStubHC();
 
 		//Generate makefile for building all the generated files with the runtime.
 		generateMakefile();
@@ -482,10 +477,11 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contexth.println();
 			
 			//Generate "struct Context"
-			stream_contexth.println("typedef struct {");    
+			stream_contexth.println("typedef struct {");	
 			for (String item_collection_name : all_items.keySet()) {
 				stream_contexth.println("\tItemCollectionEntry ** "+item_collection_name +";");
 			}
+			stream_contexth.println("\tocrGuid_t cncEnvOutTag;");
 			stream_contexth.println("} Context;");
 			stream_contexth.println();
 			
@@ -500,6 +496,8 @@ public class CncHcGenerator extends AbstractVisitor
 			//Generate "initGraph" and "deleteGraph" function prototypes
 			stream_contexth.println("Context* initGraph();");
 			stream_contexth.println("void deleteGraph(Context* CnCGraph);");
+			stream_contexth.println();
+			stream_contexth.println("void setEnvOutTag(char *outTag, Context *context);");
 			stream_contexth.println();
 			stream_contexth.println("#endif /*_CONTEXT*/");
 			stream_contexth.println();
@@ -518,8 +516,10 @@ public class CncHcGenerator extends AbstractVisitor
 		try {
 			PrintStream stream_contextc = new PrintStream(new File(dir + "Context.c"));
 			printHeader(stream_contextc);
+			// TODO - Should be using OCR macros instead of cnc_mm.h
 			stream_contextc.println("#include \"cnc_mm.h\"");
 			stream_contextc.println("#include \"Context.h\"");
+			stream_contextc.println("#include <string.h>");
 			stream_contextc.println();
 			
 			//Generate "initGraph" method
@@ -529,9 +529,7 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("\tContext* CnCGraph = (Context*) cnc_malloc (1 * sizeof(Context));\n");
 			stream_contextc.println();
 			StringBuilder sb = new StringBuilder();
-			for (Enumeration<String> e = all_items.keys(); e.hasMoreElements();)
-			{
-				String item_collection_name = (String) e.nextElement();
+			for (String item_collection_name : all_items.keySet()) {
 				stream_contextc.println("\tCnCGraph->"+item_collection_name +" = (ItemCollectionEntry**) cnc_malloc (TABLE_SIZE * sizeof(ItemCollectionEntry*));");
 				sb.append("CnCGraph->"+item_collection_name + "[i] = ");
 			}
@@ -539,6 +537,9 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("\tfor(i=0; i<TABLE_SIZE; i++){");
 			stream_contextc.println("\t\t" + sb.toString() + " NULL;");
 			stream_contextc.println("\t}");
+			stream_contextc.println();
+			stream_contextc.println("\tocrEventCreate(&(CnCGraph->cncEnvOutTag), OCR_EVENT_ONCE_T, true);");
+			stream_contextc.println();
 			stream_contextc.println("\treturn CnCGraph;");
 			stream_contextc.println("}");
 			stream_contextc.println();
@@ -546,15 +547,20 @@ public class CncHcGenerator extends AbstractVisitor
 			//Generate "deleteGraph" method
 			stream_contextc.println("void deleteGraph(Context* CnCGraph)");
 			stream_contextc.println("{"); 
-			for (Enumeration<String> e = all_items.keys(); e.hasMoreElements();)
-			{
-				String item_collection_name = (String) e.nextElement();
+			for (String item_collection_name : all_items.keySet()) {
 				stream_contextc.println("\tcnc_free(CnCGraph->"+item_collection_name +");");
 			}
 			stream_contextc.println();
 			stream_contextc.println("\tcnc_free(CnCGraph);");
 			stream_contextc.println("}");
 			stream_contextc.println();
+			stream_contextc.println("void setEnvOutTag(char *tag, Context *context) {");
+			stream_contextc.println("\tchar *tagPtr;");
+			stream_contextc.println("\tocrGuid_t tagGuid;");
+			stream_contextc.println("\tocrDbCreate(&tagGuid, (void**)&tagPtr, strlen(tag), 0, NULL_GUID, NO_ALLOC);");
+			stream_contextc.println("\tstrcpy(tagPtr, tag);");
+			stream_contextc.println("\tocrEventSatisfy(context->cncEnvOutTag, tagGuid);");
+			stream_contextc.println("}");
 		}
 		catch (IOException ie)
 		{
@@ -579,27 +585,15 @@ public class CncHcGenerator extends AbstractVisitor
 
 			//Generate step unique identifiers
 			int i=0;
-			for (Enumeration<String> e = steps_identifiers.keys(), eg = steps_identifiers_gpu.keys(); e.hasMoreElements()||eg.hasMoreElements();)
-			{
-				String step_name;
-				if(e.hasMoreElements())
-					step_name = (String) e.nextElement();
-				else
-					step_name = (String) eg.nextElement();
+			for (String step_name : steps_identifiers.keySet()) {
 				stream_dispatchh.println("#define Step_" + step_name + " " + (i++));
 			}
 			stream_dispatchh.println();
 			
 			//Generate "xxx_gets" and "xxx_dependencies" function prototypes
-			for (Enumeration<String> e = steps_identifiers.keys(), eg = steps_identifiers_gpu.keys(); e.hasMoreElements()||eg.hasMoreElements();)
-			{
-				String step_name;
-				if(e.hasMoreElements())
-					step_name = (String) e.nextElement();
-				else
-					step_name = (String) eg.nextElement();
+			for (String step_name : steps_identifiers.keySet()) {
 				stream_dispatchh.println("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]);");
-				stream_dispatchh.println("void " + step_name + "_dependencies(char * tag, ocrGuid_t edt_guid, Context * context);");
+				stream_dispatchh.println("void " + step_name + "_dependencies(char * tag, Context * context);");
 			}
 			stream_dispatchh.println();
 			
@@ -607,13 +601,6 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchh.println(pragma_suspend);
 			stream_dispatchh.println("void prescribeStep(char* stepName, char* stepTag, Context* context);");
 			stream_dispatchh.println();
-			
-			//Generate device place definitions
-			if(steps_identifiers_gpu.size() > 0 || affinity_enabled){
-				stream_dispatchh.println("extern place_t * gpu_pl;");
-				stream_dispatchh.println("extern place_t * fpga_pl;");
-				stream_dispatchh.println("extern place_t * cpuroot_pl;");
-			}
 			
 			stream_dispatchh.println();
 			
@@ -652,44 +639,10 @@ public class CncHcGenerator extends AbstractVisitor
 			
 			stream_dispatchhc.println("void prescribeStep(char* stepName, char* stepTag, Context* context){");
 			//Generate "prescribeStep" method
-			for (Enumeration<String> e = steps_identifiers.keys(), eg = steps_identifiers_gpu.keys(); e.hasMoreElements()||eg.hasMoreElements();){
-				String step_name;
-				step_info_local sil;
-				if(e.hasMoreElements()){
-					step_name = (String) e.nextElement();
-					sil = steps_identifiers.get(step_name);
-				}
-				else{
-					step_name = (String) eg.nextElement();
-					sil = steps_identifiers_gpu.get(step_name);
-				}
+			for (String step_name : steps_identifiers.keySet()) {
+				step_info_local sil = steps_identifiers.get(step_name);
 				stream_dispatchhc.println("\tif(strcmp(stepName, \"" + step_name + "\") == 0){");
-				int size = sil.identifiers.size(), counter = 0;
-				for(int sili = 0; sili < size; sili++){
-					step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
-					if(sc.getname() != null){
-						stream_dispatchhc.println("\t\tint " + sc.getname() + " = getTag(stepTag, "+sili+");");
-					}
-					else{
-						stream_dispatchhc.println("\t\tint " + sc.getstart_range() + " = getTag(stepTag, "+sili+");");
-						sili++;
-						stream_dispatchhc.println("\t\tint " + sc.getend_range() + " = getTag(stepTag, "+sili+");");
-						size++;
-					}
-					counter ++;
-				}
-				stream_dispatchhc.println("\t\tocrGuid_t edt_guid, templ_guid;");
-				stream_dispatchhc.println("\t\tocrEdtTemplateCreate(&templ_guid, "+step_name+"_gets, 2, 0"+step_no_gets.get(step_name)+");");
-				stream_dispatchhc.println("\t\tvoid** args = (void**)cnc_malloc(2*sizeof(void*));");
-				stream_dispatchhc.println("\t\targs[0] = (void*) stepTag;");
-				stream_dispatchhc.println("\t\targs[1] = context;");
-				stream_dispatchhc.println("\t\tocrEdtCreate(&edt_guid, templ_guid,");
-				stream_dispatchhc.println("\t\t\t/*paramc=*/2, /*paramv=*/(u64*)args,");
-				stream_dispatchhc.println("\t\t\t/*depc=*/0"+ step_no_gets.get(step_name) +", /*depv=*/NULL,");
-				stream_dispatchhc.println("\t\t\t/*properties=*/0, /*affinity=*/0, /*outEvent=*/NULL_GUID);");
-				stream_dispatchhc.println("\t\t"+step_name+"_dependencies(stepTag, edt_guid, context);");
-				//stream_dispatchhc.println("\t\tocrEdtSchedule(edt_guid);");
-				//stream_dispatchhc.println("\t\tocrEdtExecute(edt_guid);");
+				stream_dispatchhc.println("\t\t"+step_name+"_dependencies(stepTag, context);");
 				stream_dispatchhc.println("\t\treturn;\n\t}");
 			}
 			stream_dispatchhc.println("\tprintf(\"Step %s not defined\\n\", stepName);");
@@ -697,6 +650,69 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("}");
 			stream_dispatchhc.println();
 			
+			// Application entry point
+			stream_dispatchhc.println("ocrGuid_t cncEnvInEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {");
+			stream_dispatchhc.println("\t// Unpack argc and argv (passed thru from mainEdt)");
+			stream_dispatchhc.println("\tu64 *packedArgs = depv[0].ptr;");
+			stream_dispatchhc.println("\tint i, argc = packedArgs[0];");
+			stream_dispatchhc.println("\tchar *argBytes = (char*)packedArgs;");
+			stream_dispatchhc.println("\tchar **argv = MALLOC(sizeof(char*)*argc);");
+			stream_dispatchhc.println("\tfor (i=0; i<argc; i++) argv[i] = argBytes+packedArgs[i+1];");
+			stream_dispatchhc.println("\t// Run user's cncEnvIn function");
+			stream_dispatchhc.println("\tcncEnvIn(argc, argv, (Context*)paramv[0]);");
+			stream_dispatchhc.println("\treturn NULL_GUID;");
+			stream_dispatchhc.println("}");
+			stream_dispatchhc.println("");
+			stream_dispatchhc.println("ocrGuid_t cncEnvOutEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {");
+			stream_dispatchhc.println("\t// Pull the tag");
+			stream_dispatchhc.println("\tchar *stepTag = depv[0].ptr;");
+			stream_dispatchhc.println("\t// Schedule user's ocrEnvOut function");
+			stream_dispatchhc.println("\tcncEnvOut_dependencies(stepTag, (Context*)paramv[0]);");
+			stream_dispatchhc.println("\treturn NULL_GUID;");
+			stream_dispatchhc.println("}");
+			stream_dispatchhc.println("");
+			stream_dispatchhc.println("ocrGuid_t cncEnvFreeEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {");
+			stream_dispatchhc.println("\t// Execution is finished at this point");
+			stream_dispatchhc.println("\tdeleteGraph((Context*)paramv[0]);");
+			stream_dispatchhc.println("\tocrShutdown();");
+			stream_dispatchhc.println("\treturn NULL_GUID;");
+			stream_dispatchhc.println("}");
+			stream_dispatchhc.println("");
+			stream_dispatchhc.println("ocrGuid_t mainEdt(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {");
+			stream_dispatchhc.println("\tContext *context = initGraph();");
+			stream_dispatchhc.println("\t// Create ocrEnvInEdt as a finish EDT");
+			stream_dispatchhc.println("\tocrGuid_t inEdtGuid, graphDoneGuid, templGuid;");
+			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvInEdt, 1, 1);");
+			stream_dispatchhc.println("\tocrEdtCreate(&inEdtGuid, templGuid,");
+			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
+			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,");
+			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
+			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&graphDoneGuid);");
+			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
+			stream_dispatchhc.println("\t// Create ocrEnvOutEdt as a finish EDT waiting on EnvIn");
+			stream_dispatchhc.println("\tocrGuid_t outEdtGuid, outputDoneGuid;");
+			stream_dispatchhc.println("\tocrGuid_t outDeps[] = { context->cncEnvOutTag, graphDoneGuid };");
+			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, 2);");
+			stream_dispatchhc.println("\tocrEdtCreate(&outEdtGuid, templGuid,");
+			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
+			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/outDeps,");
+			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
+			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&outputDoneGuid);");
+			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
+			stream_dispatchhc.println("\t// Create ocrEnvFreeEdt waiting on EnvOut");
+			stream_dispatchhc.println("\tocrGuid_t freeEdtGuid;");
+			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvFreeEdt, 1, 1);");
+			stream_dispatchhc.println("\tocrEdtCreate(&freeEdtGuid, templGuid,");
+			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
+			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/&outputDoneGuid,");
+			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_NONE,");
+			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);");
+			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
+			stream_dispatchhc.println("\t// start EnvIn now that the deps are all set up");
+			stream_dispatchhc.println("\tocrAddDependence(depv[0].guid, inEdtGuid, 0, DB_DEFAULT_MODE);");
+			stream_dispatchhc.println("\treturn NULL_GUID;");
+			stream_dispatchhc.println("}");
+			stream_dispatchhc.println();
 		}
 		catch (IOException ie){
 			System.err.println(ie.getMessage());
@@ -717,8 +733,6 @@ public class CncHcGenerator extends AbstractVisitor
 					String step_name = (String)list_of_steps.get(j);
 					step_info_local sil = steps_identifiers.get(step_name);
 					if(sil != null) sil.prescribing_tag = tag_name;
-					sil = steps_identifiers_gpu.get(step_name);
-					if(sil != null) sil.prescribing_tag = tag_name;
 				}
 			}
 
@@ -727,99 +741,36 @@ public class CncHcGenerator extends AbstractVisitor
 			if(!file_mainhc.exists()){
 				PrintStream stream_mainhc = new PrintStream(file_mainhc);
 				stream_mainhc.println();
-				stream_mainhc.println("   /***** AUTO-GENERATED FILE from file " + filename + " - only generated if file does not exist (on running cncc_t the first time) - feel free to edit *****/");
+				stream_mainhc.println("   /***** AUTO-GENERATED FILE from file " + filename + " - only generated if file does not exist (on running cncocr_t the first time) - feel free to edit *****/");
 				stream_mainhc.println();
 				stream_mainhc.println("#include \"Dispatch.h\"");
-				stream_mainhc.println("#include <string.h>");
-				if(steps_identifiers_gpu.size() > 0 || affinity_enabled){
-					stream_mainhc.println("place_t * gpu_pl; //initialiaze it in main: gpu_pl = hc_get_place(NVGPU_PLACE); OR (hc_get_places(NVGPU_PLACE))[i], where i indicates the place number");
-					stream_mainhc.println("place_t * fpga_pl; //initialiaze it analagous to the GPU place. Use FPGA_PLACE as argument");
-					stream_mainhc.println("place_t * cpuroot_pl; //initialiaze it analagous to the CPU root place. Use MEM_PLACE as argument");
-				}
 				stream_mainhc.println();
-				stream_mainhc.println("int main(int argc, char** argv)\n{");
-				if(steps_identifiers_gpu.size() > 0 || affinity_enabled){
-					stream_mainhc.println("\tgpu_pl = hc_get_place(NVGPU_PLACE);");
-					stream_mainhc.println("\tfpga_pl = hc_get_place(FPGA_PLACE);");
-					stream_mainhc.println("\tcpuroot_pl=hc_get_place(MEM_PLACE);");
-				}
-				stream_mainhc.println("\n\tContext* context = initGraph();");
-				stream_mainhc.println("\t//Note: always put pointers to the values you intend o use; get these values in a variable of type pointer to the type of the item");
+				stream_mainhc.println("void cncEnvIn(int argc, char **argv, Context *context) {");
 
 				//use "environment" variable to generate as accurate as possible suggestion code for items Put and steps prescribed
 				String e_out="Ai", e_in="Ai";
 				if(environment.outputs.size() > 0){
-					e_out = environment.outputs.keys().nextElement();
+					e_out = environment.outputs.keySet().iterator().next();
 				}
 				
-				//stream_mainhc.println("\tfinish{");
-				StringBuffer buffer_step = new StringBuffer();
+				StringBuilder buffer_step = new StringBuilder();
 				int global_index = 0;
-				global_index = GenerateOutputAndTagData(environment, buffer_step, global_index, "\t\t");
+				global_index = GenerateOutputAndTagData(environment, buffer_step, global_index, "\t");
 				if(buffer_step.length()>0)
 					stream_mainhc.print(buffer_step.toString());
 				else{
-					stream_mainhc.println("\t\t/* Suggested code for writting items from environment:");
-					stream_mainhc.println("\t\tint * val = malloc(sizeof(int)); val[0] = 0;\n");
-					stream_mainhc.println("\t\tchar * in_tag = createTag(3, i, j, k);\n");
-					stream_mainhc.println("\t\tPut((void*) val, in_tag, context->"+e_out+");");
-					stream_mainhc.println("\t\tprescribeStep(\"stepName\", in_tag, context);\n\t\t*/");
+					stream_mainhc.println("\t/* Suggested code for writting items from environment:");
+					stream_mainhc.println("\tint * val = malloc(sizeof(int)); val[0] = 0;\n");
+					stream_mainhc.println("\tchar * in_tag = createTag(3, i, j, k);\n");
+					stream_mainhc.println("\tPut((void*) val, in_tag, context->"+e_out+");");
+					stream_mainhc.println("\tprescribeStep(\"stepName\", in_tag, context);\n\t*/");
 				}
-				//stream_mainhc.println("\t}\n");
+				stream_mainhc.println("}");
+				stream_mainhc.println();
 
-				//use "environment" variable to generate as accurate as possible suggestion code for items Got
-				if(environment.inputs.size() > 0){
-					e_in = environment.inputs.keys().nextElement();
-				}
-				
-				buffer_step = new StringBuffer();
-				
-				LinkedList<StringBuffer> prototypes = null;
-				StringBuffer proto0 = new StringBuffer();
-				StringBuffer proto1 = new StringBuffer();
-				StringBuffer number_of_gets = new StringBuffer();
-				if(fullauto){
-					prototypes = new LinkedList<StringBuffer>();
-					prototypes.add(proto0);
-				}
-				for(Enumeration<String> e = environment.inputs.keys(); e.hasMoreElements();){
-					String input_name = e.nextElement();
-					LinkedList<LinkedList<TagFunctionLocal>> lltf = environment.inputs.get(input_name).tag_functions;
-					for(LinkedList<TagFunctionLocal> ltf : lltf){
-						generateTagCodeIn(buffer_step, input_name, ltf, global_index, GET, prototypes, "\t");
-						if(fullauto){
-							proto0.append(prototypes.get(1).toString()+", ");
-							proto1.append(prototypes.get(2).toString()+", ");
-							number_of_gets.append(" + " + prototypes.get(3).toString());
-							prototypes.clear(); prototypes.add(proto0);
-						}
-						global_index++;
-					}
-				}
-				step_no_gets.put("environment", number_of_gets.toString());
-				
-				if(buffer_step.length() > 0){
-					if(!fullauto)
-						stream_mainhc.println("\t/*");
-					stream_mainhc.println("\tStep* step = NULL;");
-					stream_mainhc.print(buffer_step.toString());
-					if(fullauto){
-						if(proto0.length() > 0 && proto1.length() > 0){
-							stream_mainhc.println("\n\t"+mainUsesGraphOutputs+"("+proto1.substring(0, proto1.length()-2)+");");
-							user_written_main_uses_data_buffer.append("void " + mainUsesGraphOutputs+"("+proto0.substring(0, proto0.length()-2)+");");
-						}
-					}
-					if(!fullauto){
-						stream_mainhc.println("\t*/");
-					}
-				}
-				else{
-					stream_mainhc.println("\t//get results - example of getting a tile of type int*:");
-					stream_mainhc.println("\t//CNC_GET((void*) & (val), in_tag, context->"+e_in+", NULL);");
-				}
-				
-				stream_mainhc.println("\n\tdeleteGraph(context);");
-				stream_mainhc.println("}\n");
+				stream_mainhc.println("void cncEnvOut("+envOutFunc+") {");
+				stream_mainhc.println("\t/* Do stuff with your outputs */");
+				stream_mainhc.println("}");
 			}
 		} catch (IOException ie){
 			System.err.println(ie.getMessage());
@@ -837,40 +788,32 @@ public class CncHcGenerator extends AbstractVisitor
 			//Generate simultaneously files Common.c, Common.h and StepName.c
 			File file_commonhc = new File (dir + "Common.c");
 			PrintStream stream_commonhc = new PrintStream(file_commonhc);
-			StringBuffer buffer_commonhc = new StringBuffer();
+			StringBuilder buffer_commonhc = new StringBuilder();
 			buffer_commonhc.append("\n");
 			buffer_commonhc.append("	/***** AUTO-GENERATED FILE. Do not modify unless tag functions are missing and the code generated as suggestion is in comment. *****/\n");
-			buffer_commonhc.append("	/***** WARNING: this file WILL BE OVERWRITTEN on each call of cncc_t " + filename + " *****/\n");
+			buffer_commonhc.append("	/***** WARNING: this file WILL BE OVERWRITTEN on each call of cncocr_t " + filename + " *****/\n");
 			buffer_commonhc.append("\n");
 			buffer_commonhc.append("#include \"Common.h\"\n\n");
 
 			File file_commonh = new File (dir + "Common.h");
 			PrintStream stream_commonh = new PrintStream(file_commonh);
-			StringBuffer buffer_commonh = new StringBuffer();
+			StringBuilder buffer_commonh = new StringBuilder();
 			buffer_commonh.append("\n");
 			buffer_commonh.append("	/***** AUTO-GENERATED FILE. Do not modify unless tag functions are missing and the code generated as suggestion is in comment. *****/\n");
-			buffer_commonh.append("	/***** WARNING: this file WILL BE OVERWRITTEN on each call of cncc_t " + filename + " *****/\n");
+			buffer_commonh.append("	/***** WARNING: this file WILL BE OVERWRITTEN on each call of cncocr_t " + filename + " *****/\n");
 			buffer_commonh.append("\n");
 			buffer_commonh.append("#ifndef _COMMON_H\n");
 			buffer_commonh.append("#define _COMMON_H\n");
 			buffer_commonh.append("#include \"Dispatch.h\"\n\n");
 
+			buffer_commonh.append("void cncEnvIn(int argc, char **argv, Context *context);\n");
+			generateStepHelpers("cncEnvOut", environment, 0, buffer_commonh, buffer_commonhc, envOutFunc);
+
+			// Generate step's function stub
 			File file_step;
-			for (Enumeration<String> e = steps_identifiers.keys(), eg = steps_identifiers_gpu.keys(); e.hasMoreElements()||eg.hasMoreElements();){
-				boolean isGPU=false;
-				String step_name;
-				Hashtable<String, step_info_local> steps_identifiers_local; 
-				if(e.hasMoreElements()){
-					step_name = (String) e.nextElement();
-					steps_identifiers_local = steps_identifiers;
-					file_step = new File(dir + step_name+".c");
-				}
-				else{
-					step_name = (String) eg.nextElement();
-					steps_identifiers_local = steps_identifiers_gpu;
-					file_step = new File(dir + step_name+".c");
-					isGPU=true;
-				}
+			for (String step_name : steps_identifiers.keySet()) {
+				Map<String, step_info_local> steps_identifiers_local = steps_identifiers;
+				file_step = new File(dir + step_name+".c");
 
 				boolean gen = true;
 				PrintStream stream_step = null;
@@ -878,75 +821,38 @@ public class CncHcGenerator extends AbstractVisitor
 					gen = false;
 				else	
 					stream_step = new PrintStream(file_step);
-				StringBuffer buffer_step = new StringBuffer();
-				int global_index = 0;
+				StringBuilder buffer_step = new StringBuilder();
 				step_info_local sil = steps_identifiers_local.get(step_name);
-				
-				buffer_commonhc.append("/*\n" + step_name + " dependency adding implementation\n*/\n\n");			    
-				buffer_commonhc.append("void " + step_name + "_dependencies(char * tag, ocrGuid_t edt_guid, Context * context){\n");
-				if(all_tag_functions_present){
-					GenerateInputData("__registerConsumer", sil, buffer_commonhc, step_name, null);
-				}
-				else{
-					buffer_commonhc.append("/*The function prototype for __registerConsumer is (tag, context->item_coll, ocrGuid_t, dep_index)*/\n");
-					buffer_commonhc.append("/*Note: All gets MUST be mentioned as dependencies in OCR */\n");
-				}
-				buffer_commonhc.append("}\n\n");
-				buffer_commonhc.append("/*\n" + step_name + " gets implementation\n*/\n\n");		
-				buffer_commonhc.append("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]){\n\n");
-				
-				buffer_commonh.append("void " + step_name + "( ");
-				
+				StringBuilder function_definition = new StringBuilder();
+
+				int global_index = generateStepHelpers(step_name, sil, 0, buffer_commonh, buffer_commonhc, function_definition);
+
 				buffer_step.append("\n");
 				buffer_step.append("#include \"Common.h\"\n");
-				
-				
-				String function_definition;
-				if(all_tag_functions_present){
-					LinkedList<StringBuffer> prototypeList = new LinkedList<StringBuffer>();
-					global_index = GenerateInputData(GET, sil, buffer_commonhc, step_name, prototypeList);
-					function_definition = prototypeList.get(0).toString();
-					buffer_commonh.append(function_definition+" );\n");
-					buffer_commonhc.append("\t" + step_name + "( " + prototypeList.get(1).toString() + " );\n");
-					
-					String tmp = prototypeList.get(0).toString();
-					sil.prototype_withtypes.append(tmp.substring(0,tmp.lastIndexOf(",")));
-					tmp = prototypeList.get(1).toString();
-					sil.prototype_withouttypes.append(tmp.substring(0,tmp.lastIndexOf(",")));
-				}
-				else{
-					function_definition = " ... ";
-					buffer_commonh.append(function_definition+" );\n");
-					buffer_commonhc.append("\t/* call __registerConsumer is (tag, context->item_coll, ocrGuid_t, dep_index++); for each dep added\n");
-					buffer_commonhc.append("\t   then call the step: */\n\n");
-					buffer_commonhc.append("\t" + step_name + "( " + " ... " + ");\n");
-				}
-				buffer_commonhc.append("\treturn 0;\n");
-				buffer_commonhc.append("}\n\n");
-
+		
 				if(gen){
 					buffer_step.append("void " + step_name + "( " + function_definition + "){\n");	
 					if(!all_tag_functions_present){
 						//generated suggested user code based on the cnc graph file
 						if(sil.outputs.size()>0){
-							buffer_step.append("\t/* Put output values into one or more of these output item collections: "+sil.outputs.keys().toString()+"\n");
+							buffer_step.append("\t/* Put output values into one or more of these output item collections: "+sil.outputs.keySet().toString()+"\n");
 							buffer_step.append("\t   Function prototype: Put(item_to_put, item_tag, item_collection);\n");
 							buffer_step.append("\t   Sample:\n");
 							buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
 							buffer_step.append("\t   double** data_to_put;\n");
 							buffer_step.append("\t   // fill in data_to_put;\n");
 							buffer_step.append("\t   char * newTag = createTag(3, i, j, k);\n");
-							buffer_step.append("\t   Put(data_to_put, newTag, context->" + sil.outputs.keys().nextElement() + ");\n");
+							buffer_step.append("\t   Put(data_to_put, newTag, context->" + sil.outputs.keySet().iterator().next() + ");\n");
 							buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
 							buffer_step.append("\t*/\n\n");
 						}
 						if(sil.tags.size()>0){
 							HashSet<String>  local_steps_prescribed = new HashSet<String>();
-							for(Enumeration<String> es = sil.tags.keys(); es.hasMoreElements();){
-								local_steps_prescribed.addAll(tag_steps.get(es.nextElement())) ;
+							for(String tag_step_name : sil.tags.keySet()){
+								local_steps_prescribed.addAll(tag_steps.get(tag_step_name)) ;
 							}
 							if(local_steps_prescribed.size()>0){
-								buffer_step.append("\t/* This step was defined to put the following tags: "+sil.tags.keys().toString()+"\n");
+								buffer_step.append("\t/* This step was defined to put the following tags: "+sil.tags.keySet().toString()+"\n");
 								buffer_step.append("\t   So this step should prescribe one or more of the following steps: "+local_steps_prescribed.toString()+"\n");
 								buffer_step.append("\t   Function prototype: prescribeStep(\"stepName\", step_tag, context);\n");
 								buffer_step.append("\t   Sample:\n");
@@ -959,32 +865,9 @@ public class CncHcGenerator extends AbstractVisitor
 						}
 					}
 					else{
-						if(isGPU){
-							buffer_step.append("\t/* \n");
-							buffer_step.append("\t" + step_name + cudaTail + "();\n");
-							buffer_step.append("\t*/\n\n");
-						}	
 						global_index = GenerateOutputAndTagData(sil, buffer_step, global_index, "\t");
 					}
 					buffer_step.append("}\n\n");
-					stream_step.println(buffer_step.toString());
-					stream_step.close();
-				}
-				if(isGPU){
-					buffer_commonh.append("#ifdef __CUDACC__\n");
-					buffer_commonh.append("extern \"C\"{\n");
-					buffer_commonh.append("#endif\n");
-					buffer_commonh.append("void "+step_name+cudaTail+"();\n");
-					buffer_commonh.append("#ifdef __CUDACC__\n");
-					buffer_commonh.append("}\n");
-					buffer_commonh.append("#endif\n");
-					file_step = new File(dir + step_name+cudaTail+".cu");
-					buffer_step = new StringBuffer();
-					buffer_step.append("#include <cuda.h>\n\n");
-					buffer_step.append("extern \"C\"{\n");
-					buffer_step.append("void "+step_name+cudaTail+"(){\n\n}\n\n");
-					buffer_step.append("}\n");
-					stream_step = new PrintStream(file_step);
 					stream_step.println(buffer_step.toString());
 					stream_step.close();
 				}
@@ -1002,6 +885,52 @@ public class CncHcGenerator extends AbstractVisitor
 		}
 	}
 	
+	private int generateStepHelpers(String step_name, step_info_local sil, int global_index, StringBuilder buffer_commonh, StringBuilder buffer_commonhc, StringBuilder function_definition) {
+
+		// GETS
+		buffer_commonhc.append("/*\n" + step_name + " gets implementation\n*/\n");
+		buffer_commonhc.append("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]){\n\n");
+		
+		buffer_commonh.append("void " + step_name + "( ");
+		
+		if(all_tag_functions_present){
+			LinkedList<StringBuilder> prototypeList = new LinkedList<StringBuilder>();
+			global_index = GenerateInputData(GET, sil, buffer_commonhc, step_name, prototypeList);
+			function_definition.append(prototypeList.get(0).toString());
+			buffer_commonh.append(function_definition+" );\n");
+			buffer_commonhc.append("\t" + step_name + "( " + prototypeList.get(1).toString() + " );\n");
+			
+			String tmp = prototypeList.get(0).toString();
+			sil.prototype_withtypes.append(tmp.substring(0,tmp.lastIndexOf(",")));
+			tmp = prototypeList.get(1).toString();
+			sil.prototype_withouttypes.append(tmp.substring(0,tmp.lastIndexOf(",")));
+		}
+		else{
+			function_definition.append(" ... ");
+			buffer_commonh.append(function_definition+" );\n");
+			buffer_commonhc.append("\t/* call __registerConsumer is (tag, context->item_coll, ocrGuid_t, dep_index++); for each dep added\n");
+			buffer_commonhc.append("\t   then call the step: */\n\n");
+			buffer_commonhc.append("\t" + step_name + "( " + " ... " + ");\n");
+		}
+		buffer_commonhc.append("\treturn NULL_GUID;\n");
+		buffer_commonhc.append("}\n\n");
+
+		// DEPS
+		buffer_commonhc.append("/*\n" + step_name + " dependency adding implementation\n*/\n");
+		buffer_commonhc.append("void " + step_name + "_dependencies(char * tag, Context * context){\n");
+		if(all_tag_functions_present){
+			GenerateInputData("__registerConsumer", sil, buffer_commonhc, step_name, null);
+		}
+		else{
+			buffer_commonhc.append("/*The function prototype for __registerConsumer is (tag, context->item_coll, ocrGuid_t, dep_index)*/\n");
+			buffer_commonhc.append("/*Note: All gets MUST be mentioned as dependencies in OCR */\n");
+		}
+		buffer_commonhc.append("}\n\n");
+
+		return global_index;
+	}
+
+
 	private void generateMakefile()
 	{
 		try{
@@ -1010,9 +939,7 @@ public class CncHcGenerator extends AbstractVisitor
 				File file = new File(dir + "steplist.mk");
 				PrintStream out = new PrintStream(file);
 				out.print("STEP_SRCS=");
-				for (Enumeration<String> e = steps_identifiers.keys(); e.hasMoreElements();)
-				{
-					String step_name = e.nextElement();
+				for (String step_name : steps_identifiers.keySet()) {
 					out.print(step_name + ".c ");
 				}
 				out.println();
@@ -1046,30 +973,13 @@ public class CncHcGenerator extends AbstractVisitor
 				out.println();
 
 				String linking_compiler = "gcc";	
-				// GPU not supported in OCR
-				// If we get support later, refactor this like the normal steps
-				//if(steps_identifiers_gpu.size() > 0){
-				//	StringBuffer cuda_sources = new StringBuffer();
-				//	out.print("\tgcc $(CFLAGS) -c");
-				//	for (Enumeration<String> e = steps_identifiers_gpu.keys(); e.hasMoreElements();)
-				//	{
-				//		String step_name = e.nextElement();
-				//		out.print(" " + step_name + ".c");
-				//		cuda_sources.append(" " + step_name + cudaTail + ".cu");
-				//		sb.append(step_name + ".o "+step_name + cudaTail + ".o ");
-				//	}
-				//	out.println();
-				//	out.print("\tnvcc $(CFLAGS) -c"+cuda_sources.toString());
-				//	out.println();
-				//	linking_compiler = "nvcc";
-				//}
 
 				out.println("# linking - creating the executable");
 				out.println("$(TARGET): $(OBJS)");
 				out.println("\t"+linking_compiler+" -L\"$(OCR_HOME)/lib\" \\");
-				out.println("\t    -L\"$(CNCOCR_HOME)/lib\" \\");
-				out.println("\t    $(OBJS) \\");
-				out.println("\t    -locr -lcncocr -o$@");
+				out.println("\t	-L\"$(CNCOCR_HOME)/lib\" \\");
+				out.println("\t	$(OBJS) \\");
+				out.println("\t	-locr -lcncocr -o$@");
 				out.println();
 				out.println("# delete binaries");
 				out.println("clean:");
@@ -1086,10 +996,10 @@ public class CncHcGenerator extends AbstractVisitor
 	//Helpers for generating steps (methods for Inputs)
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private int GenerateInputData(String function_name, step_info_local sil, StringBuffer out, String step_name, LinkedList<StringBuffer> prototypeList){
-		StringBuffer prototype1 = new StringBuffer();
-		StringBuffer prototype2 = new StringBuffer();
-		LinkedList<StringBuffer> prototypeListIn = new LinkedList<StringBuffer>();
+	private int GenerateInputData(String function_name, step_info_local sil, StringBuilder out, String step_name, LinkedList<StringBuilder> prototypeList){
+		StringBuilder prototype1 = new StringBuilder();
+		StringBuilder prototype2 = new StringBuilder();
+		LinkedList<StringBuilder> prototypeListIn = new LinkedList<StringBuilder>();
 
 		String tagNameOCR="tag";
 		if(function_name==GET){
@@ -1140,9 +1050,20 @@ public class CncHcGenerator extends AbstractVisitor
 			counter ++;
 		}
 
-		out.append("\n\tint edt_index=0;");
+		if(function_name != GET) {
+			out.append("\n\tocrGuid_t edt_guid, templ_guid;\n");
+			out.append("\tocrEdtTemplateCreate(&templ_guid, "+step_name+"_gets, 2, 0"+step_no_gets.get(step_name)+");\n");
+			out.append("\tu64 args[] = { (u64)"+tagNameOCR+", (u64)context };\n");
+			out.append("\tocrEdtCreate(&edt_guid, templ_guid,\n");
+			out.append("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/args,\n");
+			out.append("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,\n");
+			out.append("\t\t/*properties=*/EDT_PROP_NONE,\n");
+			out.append("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);\n");
+		}
+
+		out.append("\n\tint edt_index=0;\n");
 		
-		StringBuffer number_of_gets = new StringBuffer();
+		StringBuilder number_of_gets = new StringBuilder();
 		for (String input_name : sil.inputs.keySet()){
 			InputCollectionLocal icl = sil.inputs.get(input_name);
 			LinkedList<LinkedList<TagFunctionLocal>> lltfl = icl.tag_functions;
@@ -1170,29 +1091,30 @@ public class CncHcGenerator extends AbstractVisitor
 		return global_index;
 	}
 
-	private void generateTagCodeIn(StringBuffer out, String input_name, LinkedList<TagFunctionLocal> ltfl, int index, String function_name, LinkedList<StringBuffer> prototypeList, String initial_indent){
-		StringBuffer prototype1 = new StringBuffer();
-		StringBuffer prototype2 = new StringBuffer();
-		StringBuffer number_of_gets = new StringBuffer();
+	private void generateTagCodeIn(StringBuilder out, String input_name, LinkedList<TagFunctionLocal> ltfl, int index, String function_name, LinkedList<StringBuilder> prototypeList, String initial_indent){
+		boolean isGetFunction = function_name.equals(GET);
+		StringBuilder prototype1 = new StringBuilder();
+		StringBuilder prototype2 = new StringBuilder();
+		StringBuilder number_of_gets = new StringBuilder();
 		Iitem_type itemtype = all_items.get(input_name);
 		if(itemtype == null){
 			System.out.println("Item not found! Input name is " + input_name+ " ...exiting");
 			System.exit(1);
 		}
 		String lindex = "_index"+index+"_";
-		StringBuffer tabs = new StringBuffer(initial_indent);
-		StringBuffer for_index = new StringBuffer();
+		StringBuilder tabs = new StringBuilder(initial_indent);
+		StringBuilder for_index = new StringBuilder();
 		int no_ranges = 0;
-		StringBuffer ilist = new StringBuffer();
-		StringBuffer indexlist = new StringBuffer();
-		StringBuffer forloops = new StringBuffer();
-		StringBuffer endforloops = new StringBuffer();
+		StringBuilder ilist = new StringBuilder();
+		StringBuilder indexlist = new StringBuilder();
+		StringBuilder forloops = new StringBuilder();
+		StringBuilder endforloops = new StringBuilder();
 		String collEntryType = input_name+"Item";
 
-		StringBuffer stars = new StringBuffer();
-		LinkedList<StringBuffer> alloc_list = new LinkedList<StringBuffer>();
-		alloc_list.add(new StringBuffer());
-		StringBuffer alloc = new StringBuffer();
+		StringBuilder stars = new StringBuilder();
+		LinkedList<StringBuilder> alloc_list = new LinkedList<StringBuilder>();
+		alloc_list.add(new StringBuilder());
+		StringBuilder alloc = new StringBuilder();
 		String alloc_endforloops = "";
 
 		String previousfor = "";
@@ -1205,7 +1127,7 @@ public class CncHcGenerator extends AbstractVisitor
 				alloc_list.get(no_ranges).append(tabs + input_name + index + for_index + " = ");
 				previousrange = ((RangeLocal)tfl).stop.toString()+" - "+((RangeLocal)tfl).start.toString();
 				number_of_gets.append("("+previousrange+")*");
-				StringBuffer sbl = new StringBuffer(") * (" + previousrange + ") );\n");
+				StringBuilder sbl = new StringBuilder(") * (" + previousrange + ") );\n");
 				alloc_list.add(sbl);
 				alloc_endforloops = endforloops.toString();
 
@@ -1238,7 +1160,7 @@ public class CncHcGenerator extends AbstractVisitor
 		String stars_s = stars.toString();
 		String deref = (itemtype instanceof PointerType) ? "" : "*"; // Dereference non-pointer data
 		String other_for_index = for_index.toString();
-		if(function_name.equals (GET)) {
+		if(isGetFunction) {
 			newinput_name = input_name + index;
 			newinput_type = itemtype.toString() + deref + " ";
 			// Declare the entry
@@ -1261,11 +1183,11 @@ public class CncHcGenerator extends AbstractVisitor
 		out.append(forloops); // START FOR NEST
 
 		// GET: Copy pointer value from ocrEdtDep_t struct
-		if(function_name.equals (GET)) {
+		if(isGetFunction) {
 			out.append(String.format("%s%s%s.item = %s(%s)depv[edt_index].ptr;\n",
-			                         tabs, newinput_name, other_for_index, deref, newinput_type));
+									 tabs, newinput_name, other_for_index, deref, newinput_type));
 			out.append(String.format("%s%s%s.guid = depv[edt_index++].guid;\n",
-			                         tabs, newinput_name, other_for_index));
+									 tabs, newinput_name, other_for_index));
 		}
 		// step_dependencies: add dependencies (register) using tags
 		else {
@@ -1286,10 +1208,10 @@ public class CncHcGenerator extends AbstractVisitor
 	//Helpers for generating steps (methods for Outputs and Tags)
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private int GenerateOutputAndTagData(step_info_local sil, StringBuffer buffer_step, int global_index, String initial_indent){
+	private int GenerateOutputAndTagData(step_info_local sil, StringBuilder buffer_step, int global_index, String initial_indent){
 		if(!fullauto && sil.outputs.keySet().size()>0)
 			buffer_step.append(initial_indent+"/* This is suggested code for outputs (Put calls)- fix namings to match the data got if tag functions are missing or dependent on the inputs\n");
-		StringBuffer collectPutCalls = new StringBuffer(); 
+		StringBuilder collectPutCalls = new StringBuilder(); 
 		for (String output_name : sil.outputs.keySet()){
 			OutputCollectionLocal ocl = sil.outputs.get(output_name);
 			LinkedList<LinkedList<TagFunctionLocal>> lltfl = ocl.tag_functions;
@@ -1360,16 +1282,16 @@ public class CncHcGenerator extends AbstractVisitor
 		return global_index;
 	}
 
-	private void generateTagCodeOut(StringBuffer out, String output_name, LinkedList<TagFunctionLocal> ltfl, int index, String initial_indent, StringBuffer puts, step_info_local sil){
+	private void generateTagCodeOut(StringBuilder out, String output_name, LinkedList<TagFunctionLocal> ltfl, int index, String initial_indent, StringBuilder puts, step_info_local sil){
 		String lindex = "_index"+index+"_";
-		StringBuffer tabs = new StringBuffer(initial_indent);
-		StringBuffer ranges = new StringBuffer();
-		StringBuffer for_index = new StringBuffer();
+		StringBuilder tabs = new StringBuilder(initial_indent);
+		StringBuilder ranges = new StringBuilder();
+		StringBuilder for_index = new StringBuilder();
 		int no_ranges = 0;
-		StringBuffer ilist = new StringBuffer();
-		StringBuffer indexlist = new StringBuffer();
-		StringBuffer forloops = new StringBuffer();
-		StringBuffer endforloops = new StringBuffer();
+		StringBuilder ilist = new StringBuilder();
+		StringBuilder indexlist = new StringBuilder();
+		StringBuilder forloops = new StringBuilder();
+		StringBuilder endforloops = new StringBuilder();
 		for(int i=0; i<ltfl.size(); i++){
 			TagFunctionLocal tfl = ltfl.get(i);
 			if(tfl instanceof RangeLocal){
@@ -1398,7 +1320,7 @@ public class CncHcGenerator extends AbstractVisitor
 			System.out.println("Item not found! Output name is " + output_name+ " ...exiting");
 			System.exit(1);
 		}
-		StringBuffer extra_stars = new StringBuffer();
+		StringBuilder extra_stars = new StringBuilder();
 		String comment_on_stars = "";
 		if(no_ranges > 0){
 			comment_on_stars = "//extra \"*\" added for: "+ranges;
@@ -1449,16 +1371,16 @@ public class CncHcGenerator extends AbstractVisitor
 		puts.append("\n");
 	}
 
-	private void generateTagCodeTag(StringBuffer out, String input_name, LinkedList<TagFunctionLocal> ltfl, int index, LinkedList<String> steps_prescribed, String initial_indent){
+	private void generateTagCodeTag(StringBuilder out, String input_name, LinkedList<TagFunctionLocal> ltfl, int index, LinkedList<String> steps_prescribed, String initial_indent){
 		String lindex = "_index"+index+"_";
-		StringBuffer tabs = new StringBuffer(initial_indent);
-		StringBuffer ranges = new StringBuffer();
-		StringBuffer for_index = new StringBuffer();
+		StringBuilder tabs = new StringBuilder(initial_indent);
+		StringBuilder ranges = new StringBuilder();
+		StringBuilder for_index = new StringBuilder();
 		int no_ranges = 0;
-		StringBuffer ilist = new StringBuffer();
-		StringBuffer indexlist = new StringBuffer();
-		StringBuffer forloops = new StringBuffer();
-		StringBuffer endforloops = new StringBuffer();
+		StringBuilder ilist = new StringBuilder();
+		StringBuilder indexlist = new StringBuilder();
+		StringBuilder forloops = new StringBuilder();
+		StringBuilder endforloops = new StringBuilder();
 		for(int i=0; i<ltfl.size(); i++){
 			TagFunctionLocal tfl = ltfl.get(i);
 			if(tfl instanceof RangeLocal){

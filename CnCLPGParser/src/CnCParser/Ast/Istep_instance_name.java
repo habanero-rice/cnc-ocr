@@ -9,17 +9,15 @@
 
 package CnCParser.Ast;
 
-import lpg.runtime.*;
-
 /**
- * is implemented by <b>tag_instance</b>
+ * is always implemented by <b>AstToken</b>. It is also implemented by:
+ *<b>
+ *<ul>
+ *<li>step_instance_name0
+ *<li>step_instance_name1
+ *</ul>
+ *</b>
  */
-public interface Itag_instance_restricted
-{
-    public IToken getLeftIToken();
-    public IToken getRightIToken();
-
-    void accept(IAstVisitor v);
-}
+public interface Istep_instance_name extends IAstToken {}
 
 

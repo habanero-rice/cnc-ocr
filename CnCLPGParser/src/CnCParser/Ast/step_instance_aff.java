@@ -13,23 +13,23 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 70:  step_instance_aff ::= ($step_type T_NAME$name step_description_aff_opt )
- *<li>Rule 71:  step_instance_aff ::= {$step_type T_NAME$name step_description_aff_opt }
+ *<li>Rule 72:  step_instance_aff ::= ($step_type step_instance_name$name step_description_aff_opt )
+ *<li>Rule 73:  step_instance_aff ::= {$step_type T_NAME$name step_description_aff_opt }
  *</b>
  */
 public class step_instance_aff extends Ast implements Istep_instance_aff
 {
     private AstToken _step_type;
-    private AstToken _name;
+    private Istep_instance_name _name;
     private step_affinityList _step_description_aff_opt;
 
     public AstToken getstep_type() { return _step_type; }
-    public AstToken getname() { return _name; }
+    public Istep_instance_name getname() { return _name; }
     public step_affinityList getstep_description_aff_opt() { return _step_description_aff_opt; }
 
     public step_instance_aff(IToken leftIToken, IToken rightIToken,
                              AstToken _step_type,
-                             AstToken _name,
+                             Istep_instance_name _name,
                              step_affinityList _step_description_aff_opt)
     {
         super(leftIToken, rightIToken);

@@ -13,7 +13,7 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 83:  attribute ::= T_NAME$name = T_NUMBER$value
+ *<li>Rule 85:  attribute ::= T_NAME$name = T_NUMBER$value
  *</b>
  */
 public class IntegerAttribute extends Ast implements Iattribute

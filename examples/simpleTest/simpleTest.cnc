@@ -20,6 +20,7 @@
 < int [1] singletonTag > ;
 < int [1] S1Tag > ;  
 < int [1] S2Tag > ;  
+< int [1] envOut > ;  
 
 ////////////////////////////////////////////////////////////////////////////////
 // Step Prescriptions
@@ -27,6 +28,7 @@
 < singletonTag > :: ( Step0 ) ;
 < S1Tag > :: ( Step1 ) ;	
 < S2Tag > :: ( Step2 ) ;	
+< envOut > :: ( env ) ;	
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -43,4 +45,4 @@
 env -> < singletonTag : 0 >, [ size : 0 ];
 
 // Return outputs to the caller
-[ Ci : {0 .. size[0]} ] -> env;
+[ Ci : i ] -> ( env: i );
