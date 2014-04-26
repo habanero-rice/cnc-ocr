@@ -13,7 +13,7 @@ void cncEnvIn(int argc, char **argv, Context *context) {
     //Create and put A
     int *k, i;    
     for (i=0; i<*size; i++){
-        ocrGuid_t db_handle = cncCreateItem_Ai(&k);
+        ocrGuid_t db_handle = cncCreateItem_Ai(&k, 1);
         *k = i;
         char *tagl = CREATE_TAG(i);
         Put(db_handle, tagl, context->Ai);

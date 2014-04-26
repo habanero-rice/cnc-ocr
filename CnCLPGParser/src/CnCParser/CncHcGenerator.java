@@ -521,9 +521,14 @@ public class CncHcGenerator extends AbstractVisitor
 		for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
 			String collName = item_coll.getKey();
 			String collType = item_coll.getValue().toString().trim() + "*";
+			String countArg = ", size_t count";
+			String timesCount = "*count";
 			// Must use pointer types when allocating data blocks
-			if (!(item_coll.getValue() instanceof PointerType))	collType += "*";
-			out.printf("cncHandle_t cncCreateItem_%s(%s item)", collName, collType);
+			if (!(item_coll.getValue() instanceof PointerType)) {
+				collType += "*";
+				countArg = timesCount = "";
+			}
+			out.printf("cncHandle_t cncCreateItem_%s(%s item%s)", collName, collType, countArg);
 			// End function prototype or write function body
 			if (prototypesOnly) {
 				out.println(";");
@@ -531,7 +536,8 @@ public class CncHcGenerator extends AbstractVisitor
 			else {
 				out.println(" {");
 				out.println("\tcncHandle_t handle;");
-				out.println("\tCREATE_ITEM_INSTANCE(&handle, (void**)item, sizeof(*item));");
+				out.print("\tCREATE_ITEM_INSTANCE(&handle, (void**)item,");
+				out.printf("sizeof(*item)%s);%n", timesCount);
 				out.println("\treturn handle;");
 				out.println("}");
 				out.println();
@@ -1409,9 +1415,12 @@ public class CncHcGenerator extends AbstractVisitor
 			
 		}
 		puts.append(forloops);
-		puts.append(String.format("%scncHandle_t %s%s_handle = cncCreateItem_%s(&%s%s%s);%n"+
+		String itemCount = (itemtype instanceof PointerType) ? ", 1" : "";
+		puts.append(String.format("%scncHandle_t %s%s_handle = "+
+					              "cncCreateItem_%s(&%s%s%s%s);%n"+
 		                          "%s// TODO: *%s%s%s = ???;%n",
-		                          tabs, output_name, index, output_name, output_name, index, for_index,
+		                          tabs, output_name, index,
+								  output_name, output_name, index, for_index, itemCount,
 		                          tabs, output_name, index, for_index));
 		puts.append(tabs + "char* tag"+ output_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
 		puts.append(tabs + "Put(" + output_name + index + "_handle" + ", tag"+ output_name + index +", context->" +output_name + ");\n");

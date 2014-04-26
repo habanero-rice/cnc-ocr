@@ -9,7 +9,7 @@ void StepA(int i, int j, CollAItem *CollA, Context *context) {
     }
 
     int *TotalA;
-    cncHandle_t TotalA_handle = cncCreateItem_TotalA(&TotalA);
+    cncHandle_t TotalA_handle = cncCreateItem_TotalA(&TotalA, 1);
     *TotalA = total;
 
     char *tagTotalA = CREATE_TAG(i, j);

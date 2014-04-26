@@ -10,7 +10,7 @@ void cncEnvIn(int argc, char **argv, Context *context) {
     int *CollB[100];
 
     for(i = 0; i < 100; i++){
-        cncHandle_t CollA_handle = cncCreateItem_CollA(&CollA[i]);
+        cncHandle_t CollA_handle = cncCreateItem_CollA(&CollA[i], 1);
         *CollA[i] = i;
         char *tagCollA = CREATE_TAG(i);
         Put(CollA_handle, tagCollA, context->CollA);

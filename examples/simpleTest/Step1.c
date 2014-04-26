@@ -5,7 +5,7 @@ void Step1(int k, AiItem Ai, Context *context){
 	PRINTF("Step1 %d\n", k);
 
 	int *Bi;
-	cncHandle_t Bi_handle = cncCreateItem_Bi(&Bi);
+	cncHandle_t Bi_handle = cncCreateItem_Bi(&Bi, 1);
 	*Bi = *Ai.item + 1;
 
 	char *tagBi = CREATE_TAG(k);
