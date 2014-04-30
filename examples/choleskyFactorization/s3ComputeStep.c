@@ -7,7 +7,7 @@ void s3ComputeStep(int k, int j, int i, tileSizeItem tileSize,
     double (*LkjiB)[t] = (double(*)[t])LkjiB1D.item;
     double (*LkjiC)[t] = (double(*)[t])LkjiC1D.item;
 
-	double temp;
+    double temp;
     int jB, kB, iB;
     for (jB = 0; jB < t ; jB++ ) {
         for (kB = 0; kB < t ; kB++) {
@@ -22,8 +22,8 @@ void s3ComputeStep(int k, int j, int i, tileSizeItem tileSize,
         }
     }
 
-	char* tagLkji = CREATE_TAG(j, i, k+1);
-	Put(LkjiA1D.handle, tagLkji, context->Lkji);
+    char* tagLkji = CREATE_TAG(j, i, k+1);
+    Put(LkjiA1D.handle, tagLkji, context->Lkji);
 }
 
 
