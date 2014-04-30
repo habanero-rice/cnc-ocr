@@ -1,30 +1,30 @@
 TARGET=Cholesky.exec
-CFLAGS= -O3 -g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include
+CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include -D__OCR__
 
-compile: pre first second third
+include steplist.mk
+SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)
+OBJS=$(patsubst %.c,%.o,$(SRCS))
 
+# include header globally for user-defined types
+CFLAGS+=-include user_types.h
 
-#"invoking translator"
-pre:
-	#cncc_t Cholesky.cnc
+compile: $(TARGET)
 
-# building auto-generated files
-first:
-	gcc $(CFLAGS) -c Context.c
-	gcc $(CFLAGS) -c Dispatch.c
-
-# building steps and main
-second:
-	gcc $(CFLAGS) -c Main.c kComputeStep.c s2ComputeStep.c kjComputeStep.c s3ComputeStep.c kjiComputeStep.c s1ComputeStep.c Common.c
+# building source files
+%.o: %.c
+	gcc $(CFLAGS) -c $<
 
 # linking - creating the executable
-third:
-	gcc $(CFLAGS) -L"$(OCR_HOME)/lib" \
-	       $(CNCOCR_HOME)/lib/DataDriven.o \
-	       kComputeStep.o s2ComputeStep.o kjComputeStep.o s3ComputeStep.o kjiComputeStep.o s1ComputeStep.o Common.o \
-	       Dispatch.o Context.o Main.o -o $(TARGET) -locr -lxml2 -lpthread -lm
+$(TARGET): $(OBJS)
+	gcc -L"$(OCR_HOME)/lib" \
+		-L"$(CNCOCR_HOME)/lib" \
+		$(OBJS) \
+		-locr -lcncocr -lm -o$@
 
-
+# delete binaries
 clean:
-	rm rose_*  *.o $(TARGET) 
-	#rm Context.c Context.h Dispatch.h Dispatch.c Common.h Common.c
+	rm -f $(OBJS) $(TARGET)
+
+# delete binaries and scaffolding files
+squeaky: clean
+	rm {Context,Dispatch,Common}.[ch] steplist.mk

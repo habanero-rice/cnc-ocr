@@ -58,6 +58,7 @@ char* createTag(int no_args, ...);
 #if !NO_VARIADIC_MACROS
 #define TAG_LENGTH(...) (sizeof((u64[]){__VA_ARGS__})/sizeof(u64))
 #define CREATE_TAG(...) createTag(TAG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+#define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); exit(1); } } while (0)
 #endif
 
 int getTag(char* tag, int pos);

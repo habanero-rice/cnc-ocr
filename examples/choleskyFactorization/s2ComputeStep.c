@@ -1,27 +1,30 @@
 
 #include "Common.h"
-void s2ComputeStep( int k, int j, double** Lkji0, double** Lkji1, int tileSize2, Context* context){
-	//printf("s2 [%d, %d]\n", k, j);
-        int i;
-	ocrGuid_t Lkji3_guid;
-	double **loBlock;
-	ocrDbCreate(&Lkji3_guid, (void **) &loBlock, tileSize2*sizeof(double*), 0xdead, NULL_GUID, NO_ALLOC);
-        for(i = 0; i < tileSize2; i++)
-                loBlock[i] = (double*) malloc ( tileSize2 * sizeof(double) ); //HACK!!!
+void s2ComputeStep(int k, int j, tileSizeItem tileSize, LkjiItem LkjiA1D, LkjiItem LkjiB1D, Context *context) {
+    int t = tileSize.item;
+    double (*LkjiA)[t] = (double(*)[t])LkjiA1D.item;
+    double (*LkjiB)[t] = (double(*)[t])LkjiB1D.item;
 
-        int kB, iB, jB;
-        for( kB = 0; kB < tileSize2 ; ++kB ) {
-                for( iB = 0; iB < tileSize2 ; ++iB )
-                        loBlock[ iB ][ kB ] = Lkji0[ iB ][ kB ] / Lkji1[ kB ][ kB ];
+    // Allocate new tile
+    double *loBlock1D;
+    cncHandle_t loBlock_handle = cncCreateItem_Lkji(&loBlock1D, t*t);
+    double (*loBlock)[t] = (double(*)[t])loBlock1D;
 
-                for( jB = kB + 1 ; jB < tileSize2 ; ++jB )
-                        for( iB = 0; iB < tileSize2 ; ++iB )
-                                Lkji0[ iB ][ jB ] -= Lkji1[ jB ][ kB ] * loBlock[ iB ][ kB ];
+    int kB, iB, jB;
+    for( kB = 0; kB < t ; kB++ ) {
+        for( iB = 0; iB < t ; iB++ )
+            loBlock[ iB ][ kB ] = LkjiA[ iB ][ kB ] / LkjiB[ kB ][ kB ];
 
-        }
+        for( jB = kB + 1 ; jB < t ; jB++ )
+            for( iB = 0; iB < t ; iB++ )
+                LkjiA[ iB ][ jB ] -= LkjiB[ jB ][ kB ] * loBlock[ iB ][ kB ];
 
-	char* tagLkji3 = createTag(3, j, k, k+1);
-	Put(Lkji3_guid, tagLkji3, context->Lkji);
+    }
+
+	char *tagLkji = CREATE_TAG(j, k, k+1);
+	Put(loBlock_handle, tagLkji, context->Lkji);
+
+    char *tagResult = CREATE_TAG((j)*(j+1)/2 + k);
+    Put(loBlock_handle, tagResult, context->results);
 }
-
 

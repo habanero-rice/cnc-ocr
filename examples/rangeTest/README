@@ -30,7 +30,7 @@ Finally, run the resulting binary:
 
         ./rangeTest.exec
 
-A successful run should end with the following line reporting the result:
+A successful run should end with the following lines reporting the result:
 
         Total A [0, 10): 45
         Total B [0, 10): 45
