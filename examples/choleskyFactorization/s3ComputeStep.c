@@ -15,15 +15,12 @@ void s3ComputeStep(int k, int j, int i, tileSizeItem tileSize,
             if (i != j)
                 for (iB = 0; iB < t ; iB++)
                     LkjiA[ iB ][ jB ] += temp * LkjiB[ iB ][ kB ];
-
             else
                 for (iB = jB; iB < t; iB++)
                     LkjiA[ iB ][ jB ] += temp * LkjiC[ iB ][ kB ];
         }
     }
 
-    char* tagLkji = CREATE_TAG(j, i, k+1);
+    char *tagLkji = CREATE_TAG(j, i, k+1);
     Put(LkjiA1D.handle, tagLkji, context->Lkji);
 }
-
-

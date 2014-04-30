@@ -18,7 +18,6 @@ void s2ComputeStep(int k, int j, tileSizeItem tileSize, LkjiItem LkjiA1D, LkjiIt
         for( jB = kB + 1 ; jB < t ; jB++ )
             for( iB = 0; iB < t ; iB++ )
                 LkjiA[ iB ][ jB ] -= LkjiB[ jB ][ kB ] * loBlock[ iB ][ kB ];
-
     }
 
     char *tagLkji = CREATE_TAG(j, k, k+1);

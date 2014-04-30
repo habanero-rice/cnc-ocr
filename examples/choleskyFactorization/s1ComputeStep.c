@@ -14,8 +14,7 @@ void s1ComputeStep(int k, tileSizeItem tileSize, LkjiItem Lkji1D, Context *conte
     int kB, jB, jBB, iB;
     for (kB = 0 ; kB < t ; kB++) {
         CNC_REQUIRE(Lkji[ kB ][ kB ] > 0.0,
-                    "[%d,%d][%d,%d] Error: Not a symmetric positive definite (SPD) matrix (%f) t=%d\n",
-                    k, k, kB, kB, Lkji1D.item[ kB*t + kB ], t);
+                    "[%d][%d] Error: Not a symmetric positive definite (SPD) matrix\n", k, kB);
         lBlock[ kB ][ kB ] = sqrt( Lkji[ kB ][ kB ] );
 
         for (jB = kB + 1; jB < t ; jB++)
@@ -32,4 +31,3 @@ void s1ComputeStep(int k, tileSizeItem tileSize, LkjiItem Lkji1D, Context *conte
     char *tagResult = CREATE_TAG((k)*(k+1)/2 + k);
     Put(lBlock_handle, tagResult, context->results);
 }
-

@@ -1,9 +1,9 @@
 
 #include "Common.h"
 void kjComputeStep(int k, numTilesItem numTiles, Context *context) {
-    int _index1_1;
-    for(_index1_1 = k+1; _index1_1 < numTiles.item; _index1_1++){
-        char *tagcontrolS2Tag1 = CREATE_TAG(k, _index1_1);
+    int j;
+    for(j = k+1; j < numTiles.item; j++){
+        char *tagcontrolS2Tag1 = CREATE_TAG(k, j);
         prescribeStep("kjiComputeStep", tagcontrolS2Tag1, context);
         prescribeStep("s2ComputeStep", tagcontrolS2Tag1, context);
     }

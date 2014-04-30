@@ -25,6 +25,6 @@ $(TARGET): $(OBJS)
 clean:
 	rm -f $(OBJS) $(TARGET)
 
-# delete binaries and scaffolding files
+# delete binaries, scaffolding and output files
 squeaky: clean
-	rm {Context,Dispatch,Common}.[ch] steplist.mk
+	rm {Context,Dispatch,Common}.[ch] steplist.mk Cholesky.out
