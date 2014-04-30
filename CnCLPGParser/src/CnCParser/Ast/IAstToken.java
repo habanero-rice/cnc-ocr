@@ -26,6 +26,8 @@ import lpg.runtime.*;
  *<li>item_type0
  *<li>item_type1
  *<li>item_type2
+ *<li>step_instance_name0
+ *<li>step_instance_name1
  *</ul>
  *</b>
  */

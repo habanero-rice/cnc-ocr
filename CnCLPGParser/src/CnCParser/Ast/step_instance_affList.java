@@ -13,8 +13,8 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 68:  step_instance_list ::= step_instance_aff
- *<li>Rule 69:  step_instance_list ::= step_instance_list , step_instance_aff
+ *<li>Rule 70:  step_instance_list ::= step_instance_aff
+ *<li>Rule 71:  step_instance_list ::= step_instance_list , step_instance_aff
  *</b>
  */
 public class step_instance_affList extends AbstractAstList implements Istep_instance_list
@@ -31,9 +31,9 @@ public class step_instance_affList extends AbstractAstList implements Istep_inst
         super((Ast) _step_instance_aff, leftRecursive);
     }
 
-    public void addElement(step_instance_aff _step_instance_aff)
+    public void add(step_instance_aff _step_instance_aff)
     {
-        super.addElement((Ast) _step_instance_aff);
+        super.add((Ast) _step_instance_aff);
     }
 
     public boolean equals(Object o)

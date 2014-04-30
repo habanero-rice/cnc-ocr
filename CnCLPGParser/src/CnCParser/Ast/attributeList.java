@@ -13,9 +13,9 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 79:  attribute_list_opt ::= $Empty
- *<li>Rule 80:  attribute_list ::= attribute
- *<li>Rule 81:  attribute_list ::= attribute_list , attribute
+ *<li>Rule 81:  attribute_list_opt ::= $Empty
+ *<li>Rule 82:  attribute_list ::= attribute
+ *<li>Rule 83:  attribute_list ::= attribute_list , attribute
  *</b>
  */
 public class attributeList extends AbstractAstList implements Iattribute_list_opt, Iattribute_list
@@ -32,9 +32,9 @@ public class attributeList extends AbstractAstList implements Iattribute_list_op
         super((Ast) _attribute, leftRecursive);
     }
 
-    public void addElement(Iattribute _attribute)
+    public void add(Iattribute _attribute)
     {
-        super.addElement((Ast) _attribute);
+        super.add((Ast) _attribute);
     }
 
     public boolean equals(Object o)

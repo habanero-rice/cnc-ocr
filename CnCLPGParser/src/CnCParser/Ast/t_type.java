@@ -13,7 +13,7 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 67:  t_type ::= T_NAME
+ *<li>Rule 69:  t_type ::= T_NAME
  *</b>
  */
 public class t_type extends AstToken implements It_type

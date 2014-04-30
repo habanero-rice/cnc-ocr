@@ -1,15 +1,15 @@
 ////////////////////////////////////////////////////////////////////////////////
-// @author: Alina Sbirlea
-// alina@rice.edu
+// @author: Nick Vrvilo
+// nick.vrvilo@rice.edu
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // item collection declarations
 
-[ int size ];
-[ int* Ai ];
-[ int* Bi ];
-[ int* Ci ];
+[ int* CollA  ];
+[ int  CollB  ];
+[ int* TotalA ];
+[ int  TotalB ];
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -17,30 +17,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 // tags declarations 
 
-< int [1] singletonTag > ;
-< int [1] S1Tag > ;  
-< int [1] S2Tag > ;  
+< int [2] SATag > ;  
+< int [2] SBTag > ;  
 
 ////////////////////////////////////////////////////////////////////////////////
 // Step Prescriptions
 
-< singletonTag > :: ( Step0 ) ;
-< S1Tag > :: ( Step1 ) ;	
-< S2Tag > :: ( Step2 ) ;	
-
+< SATag > :: ( StepA ) ;	
+< SBTag > :: ( StepB ) ;	
 
 ////////////////////////////////////////////////////////////////////////////////
 // Input output relationships
 
-[ size : 0 ] -> ( Step0 : k) -> < S1Tag : { 0 .. size[0] } > ;
-
-[ Ai : k ] -> ( Step1 : k ) -> [ Bi : k ] ;
-( Step1 : k ) -> < S2Tag : k > ;
-
-[ Bi : k ] -> ( Step2 : k ) -> [ Ci : k ] ;
+[ CollA: {i..j} ] -> ( StepA: i, j ) -> [ TotalA: i, j ];
+[ CollB: {i..j} ] -> ( StepB: i, j ) -> [ TotalB: i, j ];
 
 // Write graph inputs and start steps
-env -> < singletonTag : 0 >, [ size : 0 ];
+env -> [ CollA: {0..100} ];
+env -> [ CollB: {0..100} ];
+env -> < SATag: x, y >;
+env -> < SBTag: x, y >;
 
 // Return outputs to the caller
-[ Ci : i ] -> ( env: i );
+[ TotalA: x, y ] -> ( env: x, y );
+[ TotalB: x, y ] -> ( env: x, y );

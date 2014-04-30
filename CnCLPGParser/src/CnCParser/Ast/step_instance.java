@@ -13,23 +13,23 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 57:  step_instance ::= ($step_type T_NAME$name step_description_opt )
- *<li>Rule 58:  step_instance ::= {$step_type T_NAME$name step_description_opt }
+ *<li>Rule 59:  step_instance ::= ($step_type step_instance_name$name step_description_opt )
+ *<li>Rule 60:  step_instance ::= {$step_type T_NAME$name step_description_opt }
  *</b>
  */
 public class step_instance extends Ast implements Istep_instance
 {
     private AstToken _step_type;
-    private AstToken _name;
+    private Istep_instance_name _name;
     private step_componentList _step_description_opt;
 
     public AstToken getstep_type() { return _step_type; }
-    public AstToken getname() { return _name; }
+    public Istep_instance_name getname() { return _name; }
     public step_componentList getstep_description_opt() { return _step_description_opt; }
 
     public step_instance(IToken leftIToken, IToken rightIToken,
                          AstToken _step_type,
-                         AstToken _name,
+                         Istep_instance_name _name,
                          step_componentList _step_description_opt)
     {
         super(leftIToken, rightIToken);

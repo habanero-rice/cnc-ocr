@@ -13,7 +13,7 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 78:  step_instance ::= T_ENV
+ *<li>Rule 80:  step_instance ::= T_ENV
  *</b>
  */
 public class step_instance_environment extends AstToken implements Istep_instance

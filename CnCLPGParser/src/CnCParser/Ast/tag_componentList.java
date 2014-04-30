@@ -34,9 +34,9 @@ public class tag_componentList extends AbstractAstList implements Itag_descripti
         super((Ast) _tag_component, leftRecursive);
     }
 
-    public void addElement(Itag_component _tag_component)
+    public void add(Itag_component _tag_component)
     {
-        super.addElement((Ast) _tag_component);
+        super.add((Ast) _tag_component);
     }
 
     public boolean equals(Object o)

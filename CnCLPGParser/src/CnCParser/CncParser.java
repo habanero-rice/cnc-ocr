@@ -192,7 +192,7 @@ public class CncParser implements RuleAction
             // Rule 3:  statements ::= statements statement
             //
             case 3: {
-                ((statementList)getRhsSym(1)).addElement((Istatement)getRhsSym(2));
+                ((statementList)getRhsSym(1)).add((Istatement)getRhsSym(2));
                 break;
             }
             //
@@ -346,7 +346,7 @@ public class CncParser implements RuleAction
             // Rule 21:  instance_list ::= instance_list , instance
             //
             case 21: {
-                ((instanceList)getRhsSym(1)).addElement((Iinstance)getRhsSym(3));
+                ((instanceList)getRhsSym(1)).add((Iinstance)getRhsSym(3));
                 break;
             }
             //
@@ -554,7 +554,7 @@ public class CncParser implements RuleAction
             // Rule 43:  tag_component_list ::= tag_component_list , tag_component
             //
             case 43: {
-                ((tag_componentList)getRhsSym(1)).addElement((Itag_component)getRhsSym(3));
+                ((tag_componentList)getRhsSym(1)).add((Itag_component)getRhsSym(3));
                 break;
             }
             //
@@ -716,70 +716,88 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 57:  step_instance ::= ($step_type T_NAME$name step_description_opt )
+            // Rule 57:  step_instance_name ::= T_ENV
             //
             case 57: {
                 setResult(
-                    new step_instance(getLeftIToken(), getRightIToken(),
-                                      new AstToken(getRhsIToken(1)),
-                                      new AstToken(getRhsIToken(2)),
-                                      (step_componentList)getRhsSym(3))
+                    new step_instance_name0(getRhsIToken(1))
                 );
                 break;
             }
             //
-            // Rule 58:  step_instance ::= {$step_type T_NAME$name step_description_opt }
+            // Rule 58:  step_instance_name ::= T_NAME
             //
             case 58: {
                 setResult(
+                    new step_instance_name1(getRhsIToken(1))
+                );
+                break;
+            }
+            //
+            // Rule 59:  step_instance ::= ($step_type step_instance_name$name step_description_opt )
+            //
+            case 59: {
+                setResult(
                     new step_instance(getLeftIToken(), getRightIToken(),
                                       new AstToken(getRhsIToken(1)),
-                                      new AstToken(getRhsIToken(2)),
+                                      (Istep_instance_name)getRhsSym(2),
                                       (step_componentList)getRhsSym(3))
                 );
                 break;
             }
             //
-            // Rule 59:  step_description_opt ::= step_description
-            //
-            case 59:
-                break;
-            //
-            // Rule 60:  step_description_opt ::= $Empty
+            // Rule 60:  step_instance ::= {$step_type T_NAME$name step_description_opt }
             //
             case 60: {
+                setResult(
+                    new step_instance(getLeftIToken(), getRightIToken(),
+                                      new AstToken(getRhsIToken(1)),
+                                      (Istep_instance_name)new AstToken(getRhsIToken(2)),
+                                      (step_componentList)getRhsSym(3))
+                );
+                break;
+            }
+            //
+            // Rule 61:  step_description_opt ::= step_description
+            //
+            case 61:
+                break;
+            //
+            // Rule 62:  step_description_opt ::= $Empty
+            //
+            case 62: {
                 setResult(
                     new step_componentList(getLeftIToken(), getRightIToken(), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 61:  step_description ::= : step_component_list
+            // Rule 63:  step_description ::= : step_component_list
             //
-            case 61: {
+            case 63: {
                 setResult((step_componentList)getRhsSym(2));
                 break;
             }
             //
-            // Rule 62:  step_component_list ::= step_component
+            // Rule 64:  step_component_list ::= step_component
             //
-            case 62: {
+            case 64: {
                 setResult(
                     new step_componentList((step_component)getRhsSym(1), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 63:  step_component_list ::= step_component_list , step_component
+            // Rule 65:  step_component_list ::= step_component_list , step_component
             //
-            case 63: {
-                ((step_componentList)getRhsSym(1)).addElement((step_component)getRhsSym(3));
+            case 65: {
+                ((step_componentList)getRhsSym(1)).add((step_component)getRhsSym(3));
                 break;
             }
             //
-            // Rule 64:  step_component ::= t_type T_NAME$name
+            // Rule 66:  step_component ::= t_type T_NAME$name
             //
-            case 64: {
+            case 66: {
                 setResult(
                     new step_component(getLeftIToken(), getRightIToken(),
                                        (t_type)getRhsSym(1),
@@ -790,9 +808,9 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 65:  step_component ::= T_NAME$name
+            // Rule 67:  step_component ::= T_NAME$name
             //
-            case 65: {
+            case 67: {
                 setResult(
                     new step_component(getLeftIToken(), getRightIToken(),
                                        (t_type)null,
@@ -803,9 +821,9 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 66:  step_component ::= { T_NAME$start_range .. T_NAME$end_range }
+            // Rule 68:  step_component ::= { T_NAME$start_range .. T_NAME$end_range }
             //
-            case 66: {
+            case 68: {
                 setResult(
                     new step_component(getLeftIToken(), getRightIToken(),
                                        (t_type)null,
@@ -816,95 +834,95 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 67:  t_type ::= T_NAME
+            // Rule 69:  t_type ::= T_NAME
             //
-            case 67: {
+            case 69: {
                 setResult(
                     new t_type(getRhsIToken(1))
                 );
                 break;
             }
             //
-            // Rule 68:  step_instance_list ::= step_instance_aff
+            // Rule 70:  step_instance_list ::= step_instance_aff
             //
-            case 68: {
+            case 70: {
                 setResult(
                     new step_instance_affList((step_instance_aff)getRhsSym(1), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 69:  step_instance_list ::= step_instance_list , step_instance_aff
-            //
-            case 69: {
-                ((step_instance_affList)getRhsSym(1)).addElement((step_instance_aff)getRhsSym(3));
-                break;
-            }
-            //
-            // Rule 70:  step_instance_aff ::= ($step_type T_NAME$name step_description_aff_opt )
-            //
-            case 70: {
-                setResult(
-                    new step_instance_aff(getLeftIToken(), getRightIToken(),
-                                          new AstToken(getRhsIToken(1)),
-                                          new AstToken(getRhsIToken(2)),
-                                          (step_affinityList)getRhsSym(3))
-                );
-                break;
-            }
-            //
-            // Rule 71:  step_instance_aff ::= {$step_type T_NAME$name step_description_aff_opt }
+            // Rule 71:  step_instance_list ::= step_instance_list , step_instance_aff
             //
             case 71: {
+                ((step_instance_affList)getRhsSym(1)).add((step_instance_aff)getRhsSym(3));
+                break;
+            }
+            //
+            // Rule 72:  step_instance_aff ::= ($step_type step_instance_name$name step_description_aff_opt )
+            //
+            case 72: {
                 setResult(
                     new step_instance_aff(getLeftIToken(), getRightIToken(),
                                           new AstToken(getRhsIToken(1)),
-                                          new AstToken(getRhsIToken(2)),
+                                          (Istep_instance_name)getRhsSym(2),
                                           (step_affinityList)getRhsSym(3))
                 );
                 break;
             }
             //
-            // Rule 72:  step_description_aff_opt ::= step_description_aff
-            //
-            case 72:
-                break;
-            //
-            // Rule 73:  step_description_aff_opt ::= $Empty
+            // Rule 73:  step_instance_aff ::= {$step_type T_NAME$name step_description_aff_opt }
             //
             case 73: {
+                setResult(
+                    new step_instance_aff(getLeftIToken(), getRightIToken(),
+                                          new AstToken(getRhsIToken(1)),
+                                          (Istep_instance_name)new AstToken(getRhsIToken(2)),
+                                          (step_affinityList)getRhsSym(3))
+                );
+                break;
+            }
+            //
+            // Rule 74:  step_description_aff_opt ::= step_description_aff
+            //
+            case 74:
+                break;
+            //
+            // Rule 75:  step_description_aff_opt ::= $Empty
+            //
+            case 75: {
                 setResult(
                     new step_affinityList(getLeftIToken(), getRightIToken(), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 74:  step_description_aff ::= @ step_affinity_list
+            // Rule 76:  step_description_aff ::= @ step_affinity_list
             //
-            case 74: {
+            case 76: {
                 setResult((step_affinityList)getRhsSym(2));
                 break;
             }
             //
-            // Rule 75:  step_affinity_list ::= step_affinity
+            // Rule 77:  step_affinity_list ::= step_affinity
             //
-            case 75: {
+            case 77: {
                 setResult(
                     new step_affinityList((step_affinity)getRhsSym(1), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 76:  step_affinity_list ::= step_affinity_list , step_affinity
+            // Rule 78:  step_affinity_list ::= step_affinity_list , step_affinity
             //
-            case 76: {
-                ((step_affinityList)getRhsSym(1)).addElement((step_affinity)getRhsSym(3));
+            case 78: {
+                ((step_affinityList)getRhsSym(1)).add((step_affinity)getRhsSym(3));
                 break;
             }
             //
-            // Rule 77:  step_affinity ::= T_NAME$name = T_NUMBER$val
+            // Rule 79:  step_affinity ::= T_NAME$name = T_NUMBER$val
             //
-            case 77: {
+            case 79: {
                 setResult(
                     new step_affinity(getLeftIToken(), getRightIToken(),
                                       new AstToken(getRhsIToken(1)),
@@ -913,43 +931,43 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 78:  step_instance ::= T_ENV
+            // Rule 80:  step_instance ::= T_ENV
             //
-            case 78: {
+            case 80: {
                 setResult(
                     new step_instance_environment(getRhsIToken(1))
                 );
                 break;
             }
             //
-            // Rule 79:  attribute_list_opt ::= $Empty
+            // Rule 81:  attribute_list_opt ::= $Empty
             //
-            case 79: {
+            case 81: {
                 setResult(
                     new attributeList(getLeftIToken(), getRightIToken(), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 80:  attribute_list ::= attribute
+            // Rule 82:  attribute_list ::= attribute
             //
-            case 80: {
+            case 82: {
                 setResult(
                     new attributeList((Iattribute)getRhsSym(1), true /* left recursive */)
                 );
                 break;
             }
             //
-            // Rule 81:  attribute_list ::= attribute_list , attribute
+            // Rule 83:  attribute_list ::= attribute_list , attribute
             //
-            case 81: {
-                ((attributeList)getRhsSym(1)).addElement((Iattribute)getRhsSym(3));
+            case 83: {
+                ((attributeList)getRhsSym(1)).add((Iattribute)getRhsSym(3));
                 break;
             }
             //
-            // Rule 82:  attribute ::= T_NAME$name = T_NAME$value
+            // Rule 84:  attribute ::= T_NAME$name = T_NAME$value
             //
-            case 82: {
+            case 84: {
                 setResult(
                     new VariableAttribute(getLeftIToken(), getRightIToken(),
                                           new AstToken(getRhsIToken(1)),
@@ -958,9 +976,9 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 83:  attribute ::= T_NAME$name = T_NUMBER$value
+            // Rule 85:  attribute ::= T_NAME$name = T_NUMBER$value
             //
-            case 83: {
+            case 85: {
                 setResult(
                     new IntegerAttribute(getLeftIToken(), getRightIToken(),
                                          new AstToken(getRhsIToken(1)),
@@ -969,9 +987,9 @@ public class CncParser implements RuleAction
                 break;
             }
             //
-            // Rule 84:  attribute ::= T_NAME$name = T_QUOTEDVAL$value
+            // Rule 86:  attribute ::= T_NAME$name = T_QUOTEDVAL$value
             //
-            case 84: {
+            case 86: {
                 setResult(
                     new StringAttribute(getLeftIToken(), getRightIToken(),
                                         new AstToken(getRhsIToken(1)),

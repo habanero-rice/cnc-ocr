@@ -1,35 +1,33 @@
 
 #include "Common.h"
-#include <math.h> 
 
-void s1ComputeStep( int k, double** Lkji0, int tileSize1, Context* context){
-	//printf("s1 [%d]\n", k);
-        int i;
-	ocrGuid_t Lkji2_guid;
-        double ** lBlock;
-	ocrDbCreate(&Lkji2_guid, (void **) &lBlock, tileSize1*sizeof(double*), 0xdead, NULL_GUID, NO_ALLOC);
-        for(i = 0; i < tileSize1; i++)
-                lBlock[i] = (double*) malloc ( (i+1) * sizeof(double) ); //HACK!!!
+void s1ComputeStep(int k, tileSizeItem tileSize, LkjiItem Lkji1D, Context *context){
+    int t = tileSize.item;
+    double (*Lkji)[t] = (double(*)[t])Lkji1D.item;
 
-        int kB, jB, jBB, iB;
-        for( kB = 0 ; kB < tileSize1 ; ++kB ) {
-                if( Lkji0[ kB ][ kB ] <= 0 )
-                        { printf("[%d] [%d]Error: Not a symmetric positive definite (SPD) matrix\n", -1, k); fflush(NULL);
-                          exit(1);
-                        }
+    // Allocate new tile
+    double *lBlock1D;
+    cncHandle_t lBlock_handle = cncCreateItem_Lkji(&lBlock1D, t*t);
+    double (*lBlock)[t] = (double(*)[t])lBlock1D;
 
-                lBlock[ kB ][ kB ] = sqrt( Lkji0[ kB ][ kB ] );
+    // Calculate tile values
+    int kB, jB, jBB, iB;
+    for (kB = 0 ; kB < t ; kB++) {
+        CNC_REQUIRE(Lkji[ kB ][ kB ] > 0.0,
+                    "[%d][%d] Error: Not a symmetric positive definite (SPD) matrix\n", k, kB);
+        lBlock[ kB ][ kB ] = sqrt( Lkji[ kB ][ kB ] );
 
-                for( jB = kB + 1; jB < tileSize1 ; ++jB )
-                        lBlock[ jB ][ kB ] = Lkji0[ jB ][ kB ] / lBlock[ kB ][ kB ];
+        for (jB = kB + 1; jB < t ; jB++)
+            lBlock[ jB ][ kB ] = Lkji[ jB ][ kB ] / lBlock[ kB ][ kB ];
 
-                for( jBB= kB + 1; jBB < tileSize1 ; ++jBB )
-                        for( iB = jBB ; iB < tileSize1 ; ++iB )
-                                Lkji0[ iB ][ jBB ] = Lkji0[ iB ][ jBB ] - ( lBlock[ iB ][ kB ] * lBlock[ jBB ][ kB ] );
-        }
+        for (jBB= kB + 1; jBB < t ; jBB++)
+            for (iB = jBB ; iB < t ; iB++)
+                Lkji[ iB ][ jBB ] = Lkji[ iB ][ jBB ] - ( lBlock[ iB ][ kB ] * lBlock[ jBB ][ kB ] );
+    }
 
-	char* tagLkji2 = createTag(3, k, k, k+1);
-	Put(Lkji2_guid, tagLkji2, context->Lkji);
+    char *tagLkji = CREATE_TAG(k, k, k+1);
+    Put(lBlock_handle, tagLkji, context->Lkji);
+
+    char *tagResult = CREATE_TAG((k)*(k+1)/2 + k);
+    Put(lBlock_handle, tagResult, context->results);
 }
-
-

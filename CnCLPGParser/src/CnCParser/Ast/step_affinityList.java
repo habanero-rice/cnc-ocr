@@ -13,11 +13,11 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 72:  step_description_aff_opt ::= step_description_aff
- *<li>Rule 73:  step_description_aff_opt ::= $Empty
- *<li>Rule 74:  step_description_aff ::= @ step_affinity_list
- *<li>Rule 75:  step_affinity_list ::= step_affinity
- *<li>Rule 76:  step_affinity_list ::= step_affinity_list , step_affinity
+ *<li>Rule 74:  step_description_aff_opt ::= step_description_aff
+ *<li>Rule 75:  step_description_aff_opt ::= $Empty
+ *<li>Rule 76:  step_description_aff ::= @ step_affinity_list
+ *<li>Rule 77:  step_affinity_list ::= step_affinity
+ *<li>Rule 78:  step_affinity_list ::= step_affinity_list , step_affinity
  *</b>
  */
 public class step_affinityList extends AbstractAstList implements Istep_description_aff_opt, Istep_description_aff, Istep_affinity_list
@@ -34,9 +34,9 @@ public class step_affinityList extends AbstractAstList implements Istep_descript
         super((Ast) _step_affinity, leftRecursive);
     }
 
-    public void addElement(step_affinity _step_affinity)
+    public void add(step_affinity _step_affinity)
     {
-        super.addElement((Ast) _step_affinity);
+        super.add((Ast) _step_affinity);
     }
 
     public boolean equals(Object o)

@@ -13,7 +13,7 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 77:  step_affinity ::= T_NAME$name = T_NUMBER$val
+ *<li>Rule 79:  step_affinity ::= T_NAME$name = T_NUMBER$val
  *</b>
  */
 public class step_affinity extends Ast implements Istep_affinity

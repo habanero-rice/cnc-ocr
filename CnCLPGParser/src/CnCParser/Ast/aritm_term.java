@@ -98,13 +98,13 @@ public class aritm_term extends Ast implements Iaritm_term
         v.endVisit(this);
     }
 
-	@Override
-	public String toString(){
-		if(_first != null)
-			return _first.toString() + _operand.toString() + _second.toString();
-		else
-			return _second.toString();
-	}
+    @Override
+    public String toString(){
+        if(_first != null)
+            return _first.toString() + _operand.toString() + _second.toString();
+        else
+            return _second.toString();
+    }
 }
 
 

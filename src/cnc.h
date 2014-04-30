@@ -13,6 +13,7 @@
 #define _CNC_H
 
 #include "cnc_mm.h"
+#include <ocr.h>
 
 #define CNC_SUCCESS 0
 #define CNC_ABORT 1
@@ -37,7 +38,7 @@
       if(code == CNC_ABORT) return 0;\
    } while(0);
 
-#define CNC_ASSERT(check, msg) { assert((check) && msg); }
+#define CNC_ASSERT(check, msg) { ASSERT((check) && msg); }
 
 #endif /* _CNC_H */
 

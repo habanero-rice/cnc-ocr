@@ -31,9 +31,9 @@ public class instanceList extends AbstractAstList implements Iinstance_list
         super((Ast) _instance, leftRecursive);
     }
 
-    public void addElement(Iinstance _instance)
+    public void add(Iinstance _instance)
     {
-        super.addElement((Ast) _instance);
+        super.add((Ast) _instance);
     }
 
     public boolean equals(Object o)

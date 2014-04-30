@@ -13,7 +13,7 @@ import lpg.runtime.*;
 
 /**
  *<b>
- *<li>Rule 84:  attribute ::= T_NAME$name = T_QUOTEDVAL$value
+ *<li>Rule 86:  attribute ::= T_NAME$name = T_QUOTEDVAL$value
  *</b>
  */
 public class StringAttribute extends Ast implements Iattribute

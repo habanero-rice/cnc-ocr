@@ -14,13 +14,14 @@ compile: $(OBJS)
 dist: check_dist compile
 	cp *.h  ${DIST_DIR}/include
 	cp $(OBJS) ${DIST_DIR}/lib
+	ar -rcs ${DIST_DIR}/lib/libcncocr.a $(OBJS)
 
 clean:
 	-rm *.o
 
-# we want to rebuild if .hc or the headers are modified
+# we want to rebuild if .c or the headers are modified
 %.o: %.c $(HEADERS)
-	gcc -g -c $< -I$(OCR_HOME)/include
+	gcc -g -c $< -I$(OCR_HOME)/include -D__OCR__
 
 check_dist:
 ifeq ($(DIST_DIR),)

@@ -127,6 +127,12 @@ public interface Visitor extends IAstVisitor
     boolean visit(item_type2 n);
     void endVisit(item_type2 n);
 
+    boolean visit(step_instance_name0 n);
+    void endVisit(step_instance_name0 n);
+
+    boolean visit(step_instance_name1 n);
+    void endVisit(step_instance_name1 n);
+
 }
 
 

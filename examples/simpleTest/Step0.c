@@ -1,10 +1,12 @@
 
 #include "Common.h"
-void Step0( int k, int size0, Context* context){
-	printf("Step0 %d\n", k);
-	int _index1_0;
-	for(_index1_0 = 0; _index1_0 < size0; _index1_0++){
-		char* tagS1Tag1 = createTag(1, _index1_0);
+
+void Step0(int k, sizeItem size0, Context *context) {
+	PRINTF("Step0 %d\n", k);
+
+	int i;
+	for (i = 0; i < size0.item; i++) {
+		char *tagS1Tag1 = CREATE_TAG(i);
 		prescribeStep("Step1", tagS1Tag1, context);
 	}
 }

@@ -130,6 +130,12 @@ public abstract class AbstractVisitor implements Visitor
     public boolean visit(item_type2 n) { unimplementedVisitor("visit(item_type2)"); return true; }
     public void endVisit(item_type2 n) { unimplementedVisitor("endVisit(item_type2)"); }
 
+    public boolean visit(step_instance_name0 n) { unimplementedVisitor("visit(step_instance_name0)"); return true; }
+    public void endVisit(step_instance_name0 n) { unimplementedVisitor("endVisit(step_instance_name0)"); }
+
+    public boolean visit(step_instance_name1 n) { unimplementedVisitor("visit(step_instance_name1)"); return true; }
+    public void endVisit(step_instance_name1 n) { unimplementedVisitor("endVisit(step_instance_name1)"); }
+
 
     public boolean visit(Ast n)
     {
@@ -170,6 +176,8 @@ public abstract class AbstractVisitor implements Visitor
         else if (n instanceof item_type0) return visit((item_type0) n);
         else if (n instanceof item_type1) return visit((item_type1) n);
         else if (n instanceof item_type2) return visit((item_type2) n);
+        else if (n instanceof step_instance_name0) return visit((step_instance_name0) n);
+        else if (n instanceof step_instance_name1) return visit((step_instance_name1) n);
         throw new UnsupportedOperationException("visit(" + n.getClass().toString() + ")");
     }
     public void endVisit(Ast n)
@@ -211,6 +219,8 @@ public abstract class AbstractVisitor implements Visitor
         else if (n instanceof item_type0) endVisit((item_type0) n);
         else if (n instanceof item_type1) endVisit((item_type1) n);
         else if (n instanceof item_type2) endVisit((item_type2) n);
+        else if (n instanceof step_instance_name0) endVisit((step_instance_name0) n);
+        else if (n instanceof step_instance_name1) endVisit((step_instance_name1) n);
         throw new UnsupportedOperationException("visit(" + n.getClass().toString() + ")");
     }
 }
