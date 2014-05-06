@@ -1,5 +1,5 @@
 
-#include "Dispatch.h"
+#include "Context.h"
 
 void cncEnvIn(int argc, char **argv, Context *context) {
 
@@ -21,7 +21,7 @@ void cncEnvIn(int argc, char **argv, Context *context) {
 
     PRINTF("Starting parallel computation\n");
 
-    prescribeStep("Step0", tag, context);
+    CNC_PRESCRIBE(Step0, tag, context);
 
     char *tag2 = CREATE_TAG(2);
     setEnvOutTag(tag2, context);

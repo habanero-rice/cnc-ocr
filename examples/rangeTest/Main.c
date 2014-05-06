@@ -1,5 +1,5 @@
 
-#include "Dispatch.h"
+#include "Context.h"
 
 void cncEnvIn(int argc, char **argv, Context *context) {
     // Sum from 0 until 10
@@ -24,10 +24,10 @@ void cncEnvIn(int argc, char **argv, Context *context) {
     }
 
     char *tagSATag2 = CREATE_TAG(x, y);
-    prescribeStep("StepA", tagSATag2, context);
+    CNC_PRESCRIBE(StepA, tagSATag2, context);
 
     char *tagSBTag3 = CREATE_TAG(x, y);
-    prescribeStep("StepB", tagSBTag3, context);
+    CNC_PRESCRIBE(StepB, tagSBTag3, context);
 
     char *tagOut = CREATE_TAG(x, y);
     setEnvOutTag(tagOut, context);
