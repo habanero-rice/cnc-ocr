@@ -12,7 +12,7 @@ void Step1(int k, AiItem Ai, Context *context){
 	Put(Bi_handle, tagBi, context->Bi);
 
 	char *tagS2Tag2 = CREATE_TAG(k);
-	prescribeStep("Step2", tagS2Tag2, context);
+	CNC_PRESCRIBE(Step2, tagS2Tag2, context);
 
 }
 

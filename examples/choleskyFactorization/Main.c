@@ -1,7 +1,4 @@
-
-   /***** AUTO-GENERATED FILE from file Cholesky.cnc - only generated if file does not exist (on running cncocr_t the first time) - feel free to edit *****/
-
-#include "Dispatch.h"
+#include "Context.h"
 
 void cncEnvIn(int argc, char **argv, Context *context) {
     CNC_REQUIRE(argc==4, "Usage: ./Cholesky matrixSize tileSize fileName (found %d args)\n", argc);
@@ -67,7 +64,7 @@ void cncEnvIn(int argc, char **argv, Context *context) {
     Put(time_handle, tag, context->startTime);
 
     // Start the computation
-    prescribeStep("kComputeStep", tag, context);
+    CNC_PRESCRIBE(kComputeStep, tag, context);
 
     // Set tag for the output step
     int totalTileCount = nt * (nt + 1) / 2;

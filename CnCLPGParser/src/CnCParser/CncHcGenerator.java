@@ -49,12 +49,12 @@ public class CncHcGenerator extends AbstractVisitor
 	Map<String, Iitem_type> all_items = new LinkedHashMap<String, Iitem_type>(); //all ItemCollections names and their types
 	Map<String, tag_type_local> all_tags = new LinkedHashMap<String, tag_type_local>(); // all TagCollections names and their types
 	Map<String, step_info_local> steps_identifiers = new LinkedHashMap<String, step_info_local>();//all CPU StepCollections and their associated information (inputs, outputs, affinites...)
+	List<String> steps_name_list = new ArrayList<String>();
 	Map<String, String> step_no_gets = new LinkedHashMap<String, String>();//code computing how many dependences each step waits on.
 	step_info_local environment = null;
 	StringBuilder envOutFunc = new StringBuilder();
 	
 	String GET = "CNC_GET";
-	String pragma_suspend = "#pragma hc continuable";
 	String default_err = "Unable to generate code without this information";
 	String fullAutoUserDefined = "_userDefined";
 	String mainUsesGraphOutputs = "useGraphOutputs";
@@ -441,15 +441,15 @@ public class CncHcGenerator extends AbstractVisitor
 	//
 	public void endVisit(statementList n)
 	{
+		//Generate step stubs, common.c and common.h
+		generateSteps();
+		
 		//Generate the Context structure: context.h
 		generateContextH();
 
 		//Generate the Context init function: context.c
 		generateContextC();
 
-		//Generate step stubs, common.c and common.h
-		generateSteps();
-		
 		//Generate the step constants and declarations: dispatch.h
 		generateDispatchH();
 		
@@ -474,13 +474,25 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contexth.println("#ifndef _CONTEXT");
 			stream_contexth.println("#define _CONTEXT");
 			stream_contexth.println();
-			stream_contexth.println("#include \"DataDriven.h\"");
+			stream_contexth.println("#include \"Dispatch.h\"");
 			stream_contexth.println();
 			
-			//Generate "struct Context"
+			// Step function types
+			stream_contexth.println("typedef void (*StepDependenceFunction)(char *, struct Context *);");	
+			stream_contexth.println();	
 			stream_contexth.println("typedef struct {");	
+			stream_contexth.println("\tStepDependenceFunction depf;");
+			stream_contexth.println("\tcncHandle_t taskTemplate;");
+			stream_contexth.println("} StepFunctionInfo;");
+			stream_contexth.println();	
+
+			//Generate "struct Context"
+			stream_contexth.println("typedef struct Context {");	
 			for (String item_collection_name : all_items.keySet()) {
 				stream_contexth.println("\tItemCollectionEntry ** "+item_collection_name +";");
+			}
+			for (String step_name : steps_name_list) {
+				stream_contexth.printf("\tStepFunctionInfo %s;%n", step_name);
 			}
 			stream_contexth.println("\tocrGuid_t cncEnvOutTag;");
 			stream_contexth.println("} Context;");
@@ -575,6 +587,12 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("\t\t" + sb.toString() + " NULL;");
 			stream_contextc.println("\t}");
 			stream_contextc.println();
+			for (String step_name : steps_name_list) {
+				stream_contextc.printf("\tCnCGraph->%s.depf = %s_dependencies;%n", step_name, step_name);
+				stream_contextc.printf("\tocrEdtTemplateCreate(&CnCGraph->%s.taskTemplate, %s_gets, 2, %s);%n",
+				                       step_name, step_name, "EDT_PARAM_UNK");
+			}
+			stream_contextc.println();
 			stream_contextc.println("\tocrEventCreate(&(CnCGraph->cncEnvOutTag), OCR_EVENT_ONCE_T, true);");
 			stream_contextc.println();
 			stream_contextc.println("\treturn CnCGraph;");
@@ -619,29 +637,17 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchh.println("#ifndef _CNC_STEPS_H");
 			stream_dispatchh.println("#define _CNC_STEPS_H");
 			stream_dispatchh.println();
-			stream_dispatchh.println("#include \"cnc_mm.h\"");
-			stream_dispatchh.println("#include \"Context.h\"");
+			stream_dispatchh.println("#include \"DataDriven.h\"");
 			stream_dispatchh.println();
 
-			//Generate step unique identifiers
-			int i=0;
-			for (String step_name : steps_identifiers.keySet()) {
-				stream_dispatchh.println("#define Step_" + step_name + " " + (i++));
-			}
-			stream_dispatchh.println();
-			
+			stream_dispatchh.println("struct Context;");	
+			stream_dispatchh.println();	
+
 			//Generate "xxx_gets" and "xxx_dependencies" function prototypes
-			for (String step_name : steps_identifiers.keySet()) {
+			for (String step_name : steps_name_list) {
 				stream_dispatchh.println("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]);");
-				stream_dispatchh.println("void " + step_name + "_dependencies(char *tag, Context *context);");
+				stream_dispatchh.println("void " + step_name + "_dependencies(char *tag, struct Context *context);");
 			}
-			stream_dispatchh.println();
-			
-			//Generate "prescribeStep" function prototype
-			stream_dispatchh.println(pragma_suspend);
-			stream_dispatchh.println("void prescribeStep(char *stepName, char *stepTag, Context *context);");
-			stream_dispatchh.println();
-			
 			stream_dispatchh.println();
 			
 			if(fullauto){
@@ -672,22 +678,10 @@ public class CncHcGenerator extends AbstractVisitor
 			PrintStream stream_dispatchhc = new PrintStream(new File(dir + "Dispatch.c"));
 			printHeader(stream_dispatchhc);
 			stream_dispatchhc.println("#include \"Dispatch.h\"");
+			stream_dispatchhc.println("#include \"Context.h\"");
 			stream_dispatchhc.println("#include <string.h>");
 			stream_dispatchhc.println("#include <assert.h>");
 			stream_dispatchhc.println("#include <stdio.h>");
-			stream_dispatchhc.println();
-			
-			stream_dispatchhc.println("void prescribeStep(char *stepName, char *stepTag, Context *context){");
-			//Generate "prescribeStep" method
-			for (String step_name : steps_identifiers.keySet()) {
-				step_info_local sil = steps_identifiers.get(step_name);
-				stream_dispatchhc.println("\tif(strcmp(stepName, \"" + step_name + "\") == 0){");
-				stream_dispatchhc.println("\t\t"+step_name+"_dependencies(stepTag, context);");
-				stream_dispatchhc.println("\t\treturn;\n\t}");
-			}
-			stream_dispatchhc.println("\tprintf(\"Step %s not defined\\n\", stepName);");
-			stream_dispatchhc.println("\tassert(0);");
-			stream_dispatchhc.println("}");
 			stream_dispatchhc.println();
 			
 			// Application entry point
@@ -703,7 +697,7 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("\tFREE(argv);");
 			stream_dispatchhc.println("\treturn NULL_GUID;");
 			stream_dispatchhc.println("}");
-			stream_dispatchhc.println("");
+			stream_dispatchhc.println();
 			stream_dispatchhc.println("ocrGuid_t cncEnvOutEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\t// Pull the tag");
 			stream_dispatchhc.println("\tchar *stepTag = depv[0].ptr;");
@@ -711,14 +705,14 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("\tcncEnvOut_dependencies(stepTag, (Context*)paramv[0]);");
 			stream_dispatchhc.println("\treturn NULL_GUID;");
 			stream_dispatchhc.println("}");
-			stream_dispatchhc.println("");
+			stream_dispatchhc.println();
 			stream_dispatchhc.println("ocrGuid_t cncEnvFreeEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\t// Execution is finished at this point");
 			stream_dispatchhc.println("\tdeleteGraph((Context*)paramv[0]);");
 			stream_dispatchhc.println("\tocrShutdown();");
 			stream_dispatchhc.println("\treturn NULL_GUID;");
 			stream_dispatchhc.println("}");
-			stream_dispatchhc.println("");
+			stream_dispatchhc.println();
 			stream_dispatchhc.println("ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\tContext *context = initGraph();");
 			stream_dispatchhc.println("\t// Create ocrEnvInEdt as a finish EDT");
@@ -784,7 +778,7 @@ public class CncHcGenerator extends AbstractVisitor
 				stream_mainhc.println();
 				stream_mainhc.println("   /***** AUTO-GENERATED FILE from file " + filename + " - only generated if file does not exist (on running cncocr_t the first time) - feel free to edit *****/");
 				stream_mainhc.println();
-				stream_mainhc.println("#include \"Dispatch.h\"");
+				stream_mainhc.println("#include \"Context.h\"");
 				stream_mainhc.println();
 				stream_mainhc.println("void cncEnvIn(int argc, char **argv, Context *context) {");
 
@@ -805,7 +799,7 @@ public class CncHcGenerator extends AbstractVisitor
 					stream_mainhc.printf ("\tcncHandle_t valHandle = cncItemCreate_%s(&val);%n%n", e_out);
 					stream_mainhc.println("\tchar *in_tag = createTag(3, i, j, k);\n");
 					stream_mainhc.println("\tPut(valHandle, in_tag, context->"+e_out+");");
-					stream_mainhc.println("\tprescribeStep(\"stepName\", in_tag, context);\n\t*/");
+					stream_mainhc.println("\tCNC_PRESCRIBE(stepName, in_tag, context);\n\t*/");
 				}
 
 
@@ -856,9 +850,12 @@ public class CncHcGenerator extends AbstractVisitor
 			buffer_commonh.append("#ifndef _COMMON_H\n");
 			buffer_commonh.append("#define _COMMON_H\n");
 			buffer_commonh.append("#include \"Dispatch.h\"\n\n");
+			buffer_commonh.append("#include \"Context.h\"\n\n");
 
 			buffer_commonh.append("void cncEnvIn(int argc, char **argv, Context *context);\n");
 			generateStepHelpers("cncEnvOut", environment, 0, buffer_commonh, buffer_commonhc, envOutFunc);
+			steps_name_list.add("cncEnvOut");
+			steps_name_list.addAll(steps_identifiers.keySet());
 
 			// Generate step's function stub
 			File file_step;
@@ -905,11 +902,11 @@ public class CncHcGenerator extends AbstractVisitor
 							if(local_steps_prescribed.size()>0){
 								buffer_step.append("\t/* This step was defined to put the following tags: "+sil.tags.keySet().toString()+"\n");
 								buffer_step.append("\t   So this step should prescribe one or more of the following steps: "+local_steps_prescribed.toString()+"\n");
-								buffer_step.append("\t   Function prototype: prescribeStep(\"stepName\", step_tag, context);\n");
+								buffer_step.append("\t   Function prototype: CNC_PRESCRIBE(stepName, step_tag, context);\n");
 								buffer_step.append("\t   Sample:\n");
 								buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
 								buffer_step.append("\t   char *newTag = createTag(3, i, j, k);\n");
-								buffer_step.append("\t   prescribeStep(\""+local_steps_prescribed.iterator().next()+"\", newTag, context);\n");
+								buffer_step.append("\t   CNC_PRESCRIBE("+local_steps_prescribed.iterator().next()+", newTag, context);\n");
 								buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
 								buffer_step.append("\t*/\n\n");
 							}
@@ -1109,12 +1106,11 @@ public class CncHcGenerator extends AbstractVisitor
 		}
 
 		if(function_name != GET) {
-			out.append("\n\tocrGuid_t edt_guid, templ_guid;\n");
-			out.append("\tocrEdtTemplateCreate(&templ_guid, "+step_name+"_gets, 2, 0"+step_no_gets.get(step_name)+");\n");
+			out.append("\n\tocrGuid_t edt_guid;\n");
 			out.append("\tu64 args[] = { (u64)"+tagNameOCR+", (u64)context };\n");
-			out.append("\tocrEdtCreate(&edt_guid, templ_guid,\n");
+			out.append("\tocrEdtCreate(&edt_guid, context->"+step_name+".taskTemplate,\n");
 			out.append("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/args,\n");
-			out.append("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,\n");
+			out.append("\t\t/*depc=*/0"+step_no_gets.get(step_name)+", /*depv=*/NULL,\n");
 			out.append("\t\t/*properties=*/EDT_PROP_NONE,\n");
 			out.append("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);\n");
 		}
@@ -1466,7 +1462,7 @@ public class CncHcGenerator extends AbstractVisitor
 		out.append(forloops);
 		out.append(tabs + "char *tag"+ input_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
 		for(String step_name : steps_prescribed){
-			out.append(tabs + "prescribeStep(\"" + step_name + "\", tag"+ input_name + index +", context);\n");
+			out.append(tabs + "CNC_PRESCRIBE(" + step_name + ", tag"+ input_name + index +", context);\n");
 		}
 		out.append(endforloops);
 		out.append("\n");	

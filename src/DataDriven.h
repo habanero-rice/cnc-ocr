@@ -66,6 +66,7 @@ int getTag(char* tag, int pos);
 cncHandle_t cncGet(char* tag, ItemCollectionEntry ** hashmap);
 
 #define CREATE_ITEM_INSTANCE(guid, ptr, size) DBCREATE(guid, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
+#define CNC_PRESCRIBE(stepName, tag, context) (context->stepName.depf(tag, context))
 
 #endif /* _DATA_DRIVEN_H */
 
