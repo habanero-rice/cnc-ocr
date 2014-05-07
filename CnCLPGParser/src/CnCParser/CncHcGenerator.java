@@ -441,6 +441,17 @@ public class CncHcGenerator extends AbstractVisitor
 	//
 	public void endVisit(statementList n)
 	{
+		//fill in additional info for steps:		
+		for(String tag_name : tag_steps.keySet()){
+			ArrayList<String> list_of_steps = tag_steps.get(tag_name);
+			if(list_of_steps != null)
+			for(int j = 0; j < list_of_steps.size(); j++){
+				String step_name = (String)list_of_steps.get(j);
+				step_info_local sil = steps_identifiers.get(step_name);
+				if(sil != null) sil.prescribing_tag = tag_name;
+			}
+		}
+
 		//Generate step stubs, common.c and common.h
 		generateSteps();
 		
@@ -678,7 +689,7 @@ public class CncHcGenerator extends AbstractVisitor
 			PrintStream stream_dispatchhc = new PrintStream(new File(dir + "Dispatch.c"));
 			printHeader(stream_dispatchhc);
 			stream_dispatchhc.println("#include \"Dispatch.h\"");
-			stream_dispatchhc.println("#include \"Context.h\"");
+			stream_dispatchhc.println("#include \"Common.h\"");
 			stream_dispatchhc.println("#include <string.h>");
 			stream_dispatchhc.println("#include <assert.h>");
 			stream_dispatchhc.println("#include <stdio.h>");
@@ -760,17 +771,6 @@ public class CncHcGenerator extends AbstractVisitor
 	 */
 	private void generateMainStubHC() {
 		try {
-			//fill in additional info for steps:		
-			for(String tag_name : tag_steps.keySet()){
-				ArrayList<String> list_of_steps = tag_steps.get(tag_name);
-				if(list_of_steps != null)
-				for(int j = 0; j < list_of_steps.size(); j++){
-					String step_name = (String)list_of_steps.get(j);
-					step_info_local sil = steps_identifiers.get(step_name);
-					if(sil != null) sil.prescribing_tag = tag_name;
-				}
-			}
-
 			//Generate "Main" method
 			File file_mainhc = new File(dir + "Main.c");
 			if(!file_mainhc.exists()){
