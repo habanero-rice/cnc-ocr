@@ -7,8 +7,8 @@ DIST_DIR=
 OBJS=DataDriven.o
 HEADERS=cnc.h cnc_mm.h DataDriven.h
 
-ifeq ("$(OPT)","1")
-CFLAGS=-O2
+ifdef OPT
+CFLAGS=-O$(OPT)
 else
 CFLAGS=-g
 endif

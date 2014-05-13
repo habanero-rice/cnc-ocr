@@ -560,7 +560,7 @@ public class CncHcGenerator extends AbstractVisitor
 			else {
 				out.println(" {");
 				out.println("\tcncHandle_t handle;");
-				out.print("\tCREATE_ITEM_INSTANCE(&handle, (void**)item, ");
+				out.print("\tCNC_CREATE_ITEM(&handle, (void**)item, ");
 				out.printf("sizeof(**item)%s);%n", timesCount);
 				out.println("\treturn handle;");
 				out.println("}");
@@ -626,7 +626,7 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("void setEnvOutTag(char *tag, Context *context) {");
 			stream_contextc.println("\tchar *tagPtr;");
 			stream_contextc.println("\tocrGuid_t tagGuid;");
-			stream_contextc.println("\tCREATE_ITEM_INSTANCE(&tagGuid, (void**)&tagPtr, strlen(tag));");
+			stream_contextc.println("\tCNC_CREATE_ITEM(&tagGuid, (void**)&tagPtr, strlen(tag));");
 			stream_contextc.println("\tstrcpy(tagPtr, tag);");
 			stream_contextc.println("\tocrEventSatisfy(context->cncEnvOutTag, tagGuid);");
 			stream_contextc.println("}");
@@ -727,21 +727,20 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\tContext *context = initGraph();");
 			stream_dispatchhc.println("\t// Create ocrEnvInEdt as a finish EDT");
-			stream_dispatchhc.println("\tocrGuid_t inEdtGuid, graphDoneGuid, templGuid;");
+			stream_dispatchhc.println("\tocrGuid_t inEdtGuid, templGuid;");
 			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvInEdt, 1, 1);");
 			stream_dispatchhc.println("\tocrEdtCreate(&inEdtGuid, templGuid,");
 			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
 			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,");
-			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
-			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&graphDoneGuid);");
+			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_NONE,");
+			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);");
 			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
 			stream_dispatchhc.println("\t// Create ocrEnvOutEdt as a finish EDT waiting on EnvIn");
 			stream_dispatchhc.println("\tocrGuid_t outEdtGuid, outputDoneGuid;");
-			stream_dispatchhc.println("\tocrGuid_t outDeps[] = { context->cncEnvOutTag, graphDoneGuid };");
-			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, 2);");
+			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, 1);");
 			stream_dispatchhc.println("\tocrEdtCreate(&outEdtGuid, templGuid,");
 			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
-			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/outDeps,");
+			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/&context->cncEnvOutTag,");
 			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
 			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&outputDoneGuid);");
 			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
@@ -937,7 +936,7 @@ public class CncHcGenerator extends AbstractVisitor
 
 		// GETS
 		buffer_commonhc.append("/*\n" + step_name + " gets implementation\n*/\n");
-		buffer_commonhc.append("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]){\n\n");
+		buffer_commonhc.append("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]){\n");
 		
 		buffer_commonh.append("void " + step_name + "( ");
 		
@@ -1088,7 +1087,8 @@ public class CncHcGenerator extends AbstractVisitor
 		for(int sili = 0; sili < size; sili++){
 			step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
 			if(sc.getname() != null){
-				out.append("\t" + indextype + sc.getname() + " = getTag("+tagNameOCR+", "+sili+");\n");
+				out.append(String.format("\t%s%s = getTag(%s, %s); MAYBE_UNUSED(%s);%n",
+				                         indextype, sc.getname(), tagNameOCR, sili, sc.getname()));
 				prototype1.append(indextype + sc.getname() +", ");
 				prototype2.append(sc.getname()+", ");
 			}
