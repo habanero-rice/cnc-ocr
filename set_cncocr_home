@@ -1,2 +1,2 @@
-export CNCOCR_HOME=`pwd`/cncocr_distrib
-export PATH=${CNCOCR_HOME}/bin:$PATH
+export CNCOCR_INSTALL=`pwd`/cncocr_distrib
+export PATH=${CNCOCR_INSTALL}/bin:$PATH

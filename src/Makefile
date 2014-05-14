@@ -27,7 +27,7 @@ clean:
 
 # we want to rebuild if .c or the headers are modified
 %.o: %.c $(HEADERS)
-	gcc $(CFLAGS) -c $< -I$(OCR_HOME)/include -D__OCR__
+	gcc $(CFLAGS) -c $< -I$(OCR_INSTALL)/include -D__OCR__
 
 check_dist:
 ifeq ($(DIST_DIR),)

@@ -999,7 +999,7 @@ public class CncHcGenerator extends AbstractVisitor
 				PrintStream out = new PrintStream(file);
 				StringBuilder sb = new StringBuilder();
 				out.println("TARGET="+filename.replaceAll("[.]cnc$", ".exec"));
-				out.println("CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include -D__OCR__");
+				out.println("CFLAGS=-g -I$(CNCOCR_INSTALL)/include -I$(OCR_INSTALL)/include -D__OCR__");
 				out.println();
 				out.println("include steplist.mk");
 				out.println("SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)");
@@ -1023,8 +1023,8 @@ public class CncHcGenerator extends AbstractVisitor
 
 				out.println("# linking - creating the executable");
 				out.println("$(TARGET): $(OBJS)");
-				out.println("\t"+linking_compiler+" -L\"$(OCR_HOME)/lib\" \\");
-				out.println("\t	-L\"$(CNCOCR_HOME)/lib\" \\");
+				out.println("\t"+linking_compiler+" -L\"$(OCR_INSTALL)/lib\" \\");
+				out.println("\t	-L\"$(CNCOCR_INSTALL)/lib\" \\");
 				out.println("\t	$(OBJS) \\");
 				out.println("\t	-locr -lcncocr -o$@");
 				out.println();

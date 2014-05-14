@@ -18,6 +18,6 @@ echo "16 threads"
 OCR_CONFIG=./ocr-files/default16th.cfg ./Cholesky.exec 2000 125 ../cnc_big_inputs/Cholesky/m_2000.in
 echo $CHKSUM | $MD5BIN -c -
 echo "4 threads"
-OCR_CONFIG=$OCR_HOME/config/default.cfg ./Cholesky.exec 2000 125 ../cnc_big_inputs/Cholesky/m_2000.in
+OCR_CONFIG=$OCR_INSTALL/config/default.cfg ./Cholesky.exec 2000 125 ../cnc_big_inputs/Cholesky/m_2000.in
 echo $CHKSUM | $MD5BIN -c -
 

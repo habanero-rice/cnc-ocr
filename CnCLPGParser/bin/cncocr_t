@@ -28,9 +28,9 @@ else
     exit 1
 fi
 
-if [ -z "${CNCOCR_HOME}" ]; then
+if [ -z "${CNCOCR_INSTALL}" ]; then
 	echo ""
-	echo "ERROR CNCOCR_HOME environment variable must be defined and point to a CnC Distribution"
+	echo "ERROR CNCOCR_INSTALL environment variable must be defined and point to a CnC Distribution"
 	echo ""
     exit 1
 fi
@@ -69,8 +69,8 @@ esac
 # set classpath to CnCParser
 ###############################################################################
 
-for file in `ls ${CNCOCR_HOME}/lib`; do
-	CLASSPATH=${CLASSPATH}:${CNCOCR_HOME}/lib/$file
+for file in `ls ${CNCOCR_INSTALL}/lib`; do
+	CLASSPATH=${CLASSPATH}:${CNCOCR_INSTALL}/lib/$file
 done
 
 JAVA_OPTIONS="${JAVA_OPTIONS} -cp ${CLASSPATH}"

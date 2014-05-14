@@ -1,5 +1,5 @@
 TARGET=Cholesky.exec
-CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include -D__OCR__
+CFLAGS=-g -I$(CNCOCR_INSTALL)/include -I$(OCR_INSTALL)/include -D__OCR__
 
 include steplist.mk
 SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)
@@ -16,8 +16,8 @@ compile: $(TARGET)
 
 # linking - creating the executable
 $(TARGET): $(OBJS)
-	gcc -L"$(OCR_HOME)/lib" \
-		-L"$(CNCOCR_HOME)/lib" \
+	gcc -L"$(OCR_INSTALL)/lib" \
+		-L"$(CNCOCR_INSTALL)/lib" \
 		$(OBJS) \
 		-locr -lcncocr -lm -o$@
 
