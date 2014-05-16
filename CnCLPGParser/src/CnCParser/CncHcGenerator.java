@@ -544,24 +544,25 @@ public class CncHcGenerator extends AbstractVisitor
 		for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
 			String collName = item_coll.getKey();
 			String collType = item_coll.getValue().toString().trim() + "*";
-			String countArg = ", size_t count";
-			String timesCount = "*count";
+			String countArg = ", count";
+			String timesCount = " * (count)";
 			// Must use pointer types when allocating data blocks
 			if (!(item_coll.getValue() instanceof PointerType)) {
 				collType += "*";
 				countArg = timesCount = "";
 			}
 			collType = prettyType(collType);
-			out.printf("cncHandle_t cncCreateItem_%s(%sitem%s)", collName, collType, countArg);
+			out.printf("cncHandle_t cncCreateItemSized_%s(%sitem, size_t size)", collName, collType);
 			// End function prototype or write function body
 			if (prototypesOnly) {
 				out.println(";");
+				out.printf("#define cncCreateItem_%s(ptrptr%s) ", collName, countArg);
+				out.printf("cncCreateItemSized_%s(ptrptr, sizeof(**(ptrptr))%s)%n", collName, timesCount);
 			}
 			else {
 				out.println(" {");
 				out.println("\tcncHandle_t handle;");
-				out.print("\tCNC_CREATE_ITEM(&handle, (void**)item, ");
-				out.printf("sizeof(**item)%s);%n", timesCount);
+				out.println("\tCNC_CREATE_ITEM(&handle, (void**)item, size);");
 				out.println("\treturn handle;");
 				out.println("}");
 				out.println();
@@ -1372,11 +1373,11 @@ public class CncHcGenerator extends AbstractVisitor
 
 		//Note: CAN have a range of a collection of itemtype and not reference type.	
 		Iitem_type itemtype = all_items.get(output_name);
-		String itemTypePretty = prettyType(itemtype);
 		if(itemtype == null){
-			System.out.println("Item not found! Output name is " + output_name+ " ...exiting");
+			System.out.printf("Item `%s' not found! exiting...%n", output_name);
 			System.exit(1);
 		}
+		String itemTypePretty = prettyType(itemtype);
 		StringBuilder extra_stars = new StringBuilder();
 		String comment_on_stars = "";
 		String itemTypePrettyStars = prettyType(itemTypePretty+extra_stars);
