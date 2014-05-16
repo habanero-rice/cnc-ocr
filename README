@@ -28,11 +28,11 @@ The resulting distribution has the followign layout:
 * Setting up the environment
 *
    - Ensure OCR env is set:
-	export OCR_HOME=`your_ocr_checkout`/ocr-install
-	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OCR_HOME}/lib
+	export OCR_INSTALL=`your_ocr_checkout`/ocr-install
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OCR_INSTALL}/lib
    - Set up CnC env:
-	export CNCOCR_HOME=`pwd`/cncocr_distrib
-	export PATH=$PATH:${CNCOCR_HOME}/bin
+	export CNCOCR_INSTALL=`pwd`/cncocr_distrib
+	export PATH=$PATH:${CNCOCR_INSTALL}/bin
      You can source set_cncocr_home from the current directory to achieve this, too.
 
 *
@@ -66,7 +66,7 @@ Note: Current default runtime is _Data_Driven. (Alternative is Rollback_and_Repl
 3) The third step is adding the computation steps to each step stub and editing the Main to start the execution of the CnC graph.
 4) make; ./name.exec args
 
-Note: in CnC-OCR (as opposed to CnC-HC) the code generation in Main is not yet polished. Please refer to ${CNCOCR_HOME}/src/examples for guidelines.
+Note: in CnC-OCR (as opposed to CnC-HC) the code generation in Main is not yet polished. Please refer to ${CNCOCR_INSTALL}/src/examples for guidelines.
 
 *
 * Examples

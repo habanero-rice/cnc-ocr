@@ -544,24 +544,25 @@ public class CncHcGenerator extends AbstractVisitor
 		for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
 			String collName = item_coll.getKey();
 			String collType = item_coll.getValue().toString().trim() + "*";
-			String countArg = ", size_t count";
-			String timesCount = "*count";
+			String countArg = ", count";
+			String timesCount = " * (count)";
 			// Must use pointer types when allocating data blocks
 			if (!(item_coll.getValue() instanceof PointerType)) {
 				collType += "*";
 				countArg = timesCount = "";
 			}
 			collType = prettyType(collType);
-			out.printf("cncHandle_t cncCreateItem_%s(%sitem%s)", collName, collType, countArg);
+			out.printf("cncHandle_t cncCreateItemSized_%s(%sitem, size_t size)", collName, collType);
 			// End function prototype or write function body
 			if (prototypesOnly) {
 				out.println(";");
+				out.printf("#define cncCreateItem_%s(ptrptr%s) ", collName, countArg);
+				out.printf("cncCreateItemSized_%s(ptrptr, sizeof(**(ptrptr))%s)%n", collName, timesCount);
 			}
 			else {
 				out.println(" {");
 				out.println("\tcncHandle_t handle;");
-				out.print("\tCREATE_ITEM_INSTANCE(&handle, (void**)item, ");
-				out.printf("sizeof(**item)%s);%n", timesCount);
+				out.println("\tCNC_CREATE_ITEM(&handle, (void**)item, size);");
 				out.println("\treturn handle;");
 				out.println("}");
 				out.println();
@@ -626,7 +627,7 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("void setEnvOutTag(char *tag, Context *context) {");
 			stream_contextc.println("\tchar *tagPtr;");
 			stream_contextc.println("\tocrGuid_t tagGuid;");
-			stream_contextc.println("\tCREATE_ITEM_INSTANCE(&tagGuid, (void**)&tagPtr, strlen(tag));");
+			stream_contextc.println("\tCNC_CREATE_ITEM(&tagGuid, (void**)&tagPtr, strlen(tag));");
 			stream_contextc.println("\tstrcpy(tagPtr, tag);");
 			stream_contextc.println("\tocrEventSatisfy(context->cncEnvOutTag, tagGuid);");
 			stream_contextc.println("}");
@@ -727,21 +728,20 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println("ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\tContext *context = initGraph();");
 			stream_dispatchhc.println("\t// Create ocrEnvInEdt as a finish EDT");
-			stream_dispatchhc.println("\tocrGuid_t inEdtGuid, graphDoneGuid, templGuid;");
+			stream_dispatchhc.println("\tocrGuid_t inEdtGuid, templGuid;");
 			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvInEdt, 1, 1);");
 			stream_dispatchhc.println("\tocrEdtCreate(&inEdtGuid, templGuid,");
 			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
 			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,");
-			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
-			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&graphDoneGuid);");
+			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_NONE,");
+			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);");
 			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
 			stream_dispatchhc.println("\t// Create ocrEnvOutEdt as a finish EDT waiting on EnvIn");
 			stream_dispatchhc.println("\tocrGuid_t outEdtGuid, outputDoneGuid;");
-			stream_dispatchhc.println("\tocrGuid_t outDeps[] = { context->cncEnvOutTag, graphDoneGuid };");
-			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, 2);");
+			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, 1);");
 			stream_dispatchhc.println("\tocrEdtCreate(&outEdtGuid, templGuid,");
 			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
-			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/outDeps,");
+			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/&context->cncEnvOutTag,");
 			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
 			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&outputDoneGuid);");
 			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
@@ -937,7 +937,7 @@ public class CncHcGenerator extends AbstractVisitor
 
 		// GETS
 		buffer_commonhc.append("/*\n" + step_name + " gets implementation\n*/\n");
-		buffer_commonhc.append("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]){\n\n");
+		buffer_commonhc.append("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]){\n");
 		
 		buffer_commonh.append("void " + step_name + "( ");
 		
@@ -1000,7 +1000,7 @@ public class CncHcGenerator extends AbstractVisitor
 				PrintStream out = new PrintStream(file);
 				StringBuilder sb = new StringBuilder();
 				out.println("TARGET="+filename.replaceAll("[.]cnc$", ".exec"));
-				out.println("CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include -D__OCR__");
+				out.println("CFLAGS=-g -I$(CNCOCR_INSTALL)/include -I$(OCR_INSTALL)/include -D__OCR__");
 				out.println();
 				out.println("include steplist.mk");
 				out.println("SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)");
@@ -1024,8 +1024,8 @@ public class CncHcGenerator extends AbstractVisitor
 
 				out.println("# linking - creating the executable");
 				out.println("$(TARGET): $(OBJS)");
-				out.println("\t"+linking_compiler+" -L\"$(OCR_HOME)/lib\" \\");
-				out.println("\t	-L\"$(CNCOCR_HOME)/lib\" \\");
+				out.println("\t"+linking_compiler+" -L\"$(OCR_INSTALL)/lib\" \\");
+				out.println("\t	-L\"$(CNCOCR_INSTALL)/lib\" \\");
 				out.println("\t	$(OBJS) \\");
 				out.println("\t	-locr -lcncocr -o$@");
 				out.println();
@@ -1088,7 +1088,8 @@ public class CncHcGenerator extends AbstractVisitor
 		for(int sili = 0; sili < size; sili++){
 			step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
 			if(sc.getname() != null){
-				out.append("\t" + indextype + sc.getname() + " = getTag("+tagNameOCR+", "+sili+");\n");
+				out.append(String.format("\t%s%s = getTag(%s, %s); MAYBE_UNUSED(%s);%n",
+				                         indextype, sc.getname(), tagNameOCR, sili, sc.getname()));
 				prototype1.append(indextype + sc.getname() +", ");
 				prototype2.append(sc.getname()+", ");
 			}
@@ -1372,11 +1373,11 @@ public class CncHcGenerator extends AbstractVisitor
 
 		//Note: CAN have a range of a collection of itemtype and not reference type.	
 		Iitem_type itemtype = all_items.get(output_name);
-		String itemTypePretty = prettyType(itemtype);
 		if(itemtype == null){
-			System.out.println("Item not found! Output name is " + output_name+ " ...exiting");
+			System.out.printf("Item `%s' not found! exiting...%n", output_name);
 			System.exit(1);
 		}
+		String itemTypePretty = prettyType(itemtype);
 		StringBuilder extra_stars = new StringBuilder();
 		String comment_on_stars = "";
 		String itemTypePrettyStars = prettyType(itemTypePretty+extra_stars);

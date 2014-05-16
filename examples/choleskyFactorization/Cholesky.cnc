@@ -1,6 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Alina Sbirlea - alina@rice.edu
-// Adapted for CnC-HC after Sagnak Tasirlar's Cholesky for HJ-CNC
+// Updated for CnC-OCR by Nick Vrvilo (nick.vrvilo@rice.edu)
+// Adapted for CnC-HC after Sagnak Tasirlar's Cholesky for HJ-CnC
 // influenced by Aparna Chandramowlishwaran's Intel CnC C++ implementation
 // and by Zoran Budimlic's Habanero CnC Java implementation
 ////////////////////////////////////////////////////////////////////////////////
@@ -67,7 +68,7 @@
 // Return to the caller
 // NOTE: tileCount is the total number of result tiles;
 //       numTiles is the number of tiles in the first column of the matrix.
-[ startTime: 0], [ numTiles: 0 ], [ tileSize: 0 ], [ results: {0..tileCount} ] -> ( env: tileCount );
+[ startTime: 0 ], [ numTiles: 0 ], [ tileSize: 0 ], [ results: {0..tileCount} ] -> ( env: tileCount );
 
 // NOTE:
 // j = matrix tile's row

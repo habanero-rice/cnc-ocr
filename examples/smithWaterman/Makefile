@@ -1,23 +1,23 @@
-TARGET=sw.exec
-CFLAGS=-g -I$(CNCOCR_HOME)/include -I$(OCR_HOME)/include -D__OCR__
+TARGET=SmithWaterman.exec
+CFLAGS=-g -O1 -I$(CNCOCR_INSTALL)/include -I$(OCR_INSTALL)/include -D__OCR__
 
 include steplist.mk
 SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)
 OBJS=$(patsubst %.c,%.o,$(SRCS))
 
 # include header globally for user-defined types
-CFLAGS+=-include user_types.h
+CFLAGS+=-include smithwaterman.h
 
 compile: $(TARGET)
 
 # building source files
-%.o: %.c
+%.o: %.c smithwaterman.h
 	gcc $(CFLAGS) -c $<
 
 # linking - creating the executable
 $(TARGET): $(OBJS)
-	gcc -L"$(OCR_HOME)/lib" \
-		-L"$(CNCOCR_HOME)/lib" \
+	gcc -L"$(OCR_INSTALL)/lib" \
+		-L"$(CNCOCR_INSTALL)/lib" \
 		$(OBJS) \
 		-locr -lcncocr -o$@
 

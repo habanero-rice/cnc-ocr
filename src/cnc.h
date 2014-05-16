@@ -40,6 +40,11 @@
 
 #define CNC_ASSERT(check, msg) { ASSERT((check) && msg); }
 
+/* squelch unused variable warnings */
+#define MAYBE_UNUSED(x) ((void)x)
+
+struct Context;
+
 #endif /* _CNC_H */
 
 

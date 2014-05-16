@@ -65,8 +65,10 @@ int getTag(char* tag, int pos);
 
 cncHandle_t cncGet(char* tag, ItemCollectionEntry ** hashmap);
 
-#define CREATE_ITEM_INSTANCE(guid, ptr, size) DBCREATE(guid, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
+#define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle); // release full batch's memory
+#define CNC_CREATE_ITEM(handle, ptr, size) DBCREATE(handle, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
 #define CNC_PRESCRIBE(stepName, tag, context) (context->stepName.depf(tag, context))
+#define CNC_NULL_HANDLE NULL_GUID
 
 #endif /* _DATA_DRIVEN_H */
 
