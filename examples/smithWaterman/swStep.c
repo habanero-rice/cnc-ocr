@@ -1,5 +1,10 @@
 
 #include "Common.h"
+
+static inline int max_score(int x, int y) {
+    return (x > y) ? x : y;
+}
+
 void swStep(int i, int j, dataItem data, aboveItem above, leftItem left, Context *context) {
     int index, ii, jj;
     ASSERT(above.item[0] == left.item[0] && "Diagonal values should match");

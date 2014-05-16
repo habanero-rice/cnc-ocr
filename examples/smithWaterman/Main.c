@@ -12,19 +12,30 @@ static char ALIGNMENT_SCORES[5][5] = {
     {GAP_PENALTY,TRANSVERSION_PENALTY,TRANSITION_PENALTY,TRANSVERSION_PENALTY, MATCH}
 };
 
-static inline FILE *open_file(const char *fileName) {
+static inline signed char char_mapping(char c) {
+    switch(c) {
+        case '_': return GAP;
+        case 'A': return ADENINE;
+        case 'C': return CYTOSINE;
+        case 'G': return GUANINE;
+        case 'T': return THYMINE;
+    }
+    return -1;
+}
+
+static FILE *open_file(const char *fileName) {
     FILE *f = fopen(fileName, "r");
     CNC_REQUIRE(f, "Could not open file: %s\n", fileName);
 }
 
-static inline size_t file_length(FILE *file) {
+static size_t file_length(FILE *file) {
     fseek(file, 0L, SEEK_END);
     size_t len = (size_t)ftell(file);
     fseek(file, 0L, SEEK_SET);
     return len;
 }
 
-static inline size_t read_sequence(FILE *file, int fnum, signed char *dest, size_t fsize) {
+static size_t read_sequence(FILE *file, int fnum, signed char *dest, size_t fsize) {
     fread(dest, sizeof(char), fsize, file);
     size_t seqlen = 0, traverse_index = 0;
     while ( traverse_index < fsize ) {

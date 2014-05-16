@@ -1,5 +1,5 @@
 TARGET=SmithWaterman.exec
-CFLAGS=-g -O0 -I$(CNCOCR_INSTALL)/include -I$(OCR_INSTALL)/include -D__OCR__
+CFLAGS=-g -O1 -I$(CNCOCR_INSTALL)/include -I$(OCR_INSTALL)/include -D__OCR__
 
 include steplist.mk
 SRCS=Main.c Common.c Context.c Dispatch.c $(STEP_SRCS)

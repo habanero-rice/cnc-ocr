@@ -1,6 +1,5 @@
 
 #include "Common.h"
-#include <limits.h>
 
 void initAboveStep(int tw, int ntw, Context *context){
     int j, jj;

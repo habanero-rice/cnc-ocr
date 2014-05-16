@@ -1,6 +1,5 @@
 
 #include "Common.h"
-#include <limits.h>
 
 void initLeftStep(int th, int nth, Context *context) {
     int i, ii;
