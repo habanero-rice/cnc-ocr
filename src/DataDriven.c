@@ -11,29 +11,28 @@
  *      Authors: zoran, alina
  */
 
+#include "cnc.h"
 #include "DataDriven.h"
 #include <stdlib.h>
-#include "cnc.h"
 #include <string.h>
-
 
 /* This is the pseudo-code for data-driven implementation of item gets and puts to enable the CnC implementation */
 
 /*
  * Test if two tags are equal. Right now, we are only doing string comparisons since we only allow strings for tags
  */
-int equals(unsigned char * tag1, unsigned char * tag2) {
-    return (!strcmp(tag1, tag2));
+static int equals(unsigned char * tag1, unsigned char * tag2, int length) {
+    return memcmp(tag1, tag2, length) == 0;
 }
 
 /* Hash function implementation. Fast and pretty good */
-unsigned long hash_function(unsigned char *str) {
+static unsigned long hash_function(unsigned char *str, int length) {
     unsigned long hash = 5381;
     int c;
-
-    while (c = *str++)
+    while (length-- > 0) {
+        c = *str++;
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
+    }
     return hash;
 }
 
@@ -42,9 +41,10 @@ unsigned long hash_function(unsigned char *str) {
  * The creator parameter CNC_PUT_ENTRY/CNC_GET_ENTRY ensures that multiple 
  * puts are not allowed
  */
-ItemCollectionEntry * allocateEntryIfAbsent(
-        ItemCollectionEntry * volatile * hashmap, unsigned char * tag, char creator, char isSingleAssignment) {
-    int index = (hash_function(tag)) % TABLE_SIZE;
+static ItemCollectionEntry * allocateEntryIfAbsent(
+        ItemCollectionEntry * volatile * hashmap, unsigned char * tag,
+        int length, char creator, char isSingleAssignment) {
+    int index = (hash_function(tag, length)) % TABLE_SIZE;
     ItemCollectionEntry * volatile current = hashmap[index];
 
     /* ACHTUNG: pointer arithmetic! This SHOULD give the address of the i'th element of the hashmap array, but maybe there is a more elegant way to do that */
@@ -57,18 +57,18 @@ ItemCollectionEntry * allocateEntryIfAbsent(
     while (1) {
         /* traverse the buckets in the table to get to the last one */
         while (current != tail) {
-            if (equals(current->tag, tag)) {
+            if (equals(current->tag, tag, length)) {
                 /* deallocate the entry we eagerly allocated in a previous iteration of the outer while(1) loop */
                 if (entry != NULL){
                     ocrEventDestroy(entry->event);
                     cnc_free(entry);
                 }
                     
+                // XXX - PutIfAbsent is kind of broken here if creator is GET
+                // but using IDEM events still gives the correct behavior
                 if ((current->creator == CNC_PUT_ENTRY) && (creator == CNC_PUT_ENTRY)) {
                     if (isSingleAssignment)
-                    {    
-                        CNC_ASSERT(0, "Single assignment rule violated in item collection put\n");
-                    }
+                        CNC_ASSERT(0, "Single assignment rule violated in item collection put");
                     else
                         return NULL;
                 }
@@ -77,21 +77,16 @@ ItemCollectionEntry * allocateEntryIfAbsent(
             current = current->nxt;
         }
 
+        // XXX Why is this commented out?
         /* current has to be NULL now */
 /*        CNC_ASSERT(current == tail,
                 "Current pointer is not NULL in the allocateEntryIfAbstent function\n");
 */
         /* allocate a new entry if this is the first time we are going to try and insert a new entry to the end of the bucket list */
         if (entry == NULL) {
-            entry = (ItemCollectionEntry *) cnc_malloc(
-                    sizeof(ItemCollectionEntry));
+            entry = (ItemCollectionEntry *) cnc_malloc(sizeof(ItemCollectionEntry)+length);
             entry->creator = creator;
-            entry->tag = (char*) cnc_malloc(strlen(tag) + 1);
-            strcpy(entry->tag, tag);
-            // TODO (Nick Vrvilo):
-            // I had to change this from STICKY to IDEMPOTENT in order to
-            // get the PutIfAbsent behavior working at all for my demand-driven
-            // task scheduling in my prime generator example.
+            memcpy(entry->tag, tag, length);
             ocrEventCreate(&(entry->event), OCR_EVENT_IDEM_T, true);
         }
         entry->nxt=head;
@@ -112,12 +107,12 @@ ItemCollectionEntry * allocateEntryIfAbsent(
 }
 
 /* Putting an item into the hashmap */
-int _Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap, char isSingleAssignment) {
+static int _Put(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap, char isSingleAssignment) {
     
     CNC_ASSERT(tag != NULL, "Put - ERROR================%p\n");
 
     /* allocateEntryIfAbsent checks for multiple puts using the "CNC_PUT_ENTRY" parameter */
-    ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, CNC_PUT_ENTRY, isSingleAssignment);
+    ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, tagLength, CNC_PUT_ENTRY, isSingleAssignment);
 
     /* the returned placeholder can be NULL only when isSingleAssignment is false. 
        in which case, the item was Put previously, so the current Put returns */
@@ -131,112 +126,18 @@ int _Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap, char isSing
     return PUT_SUCCESS;
 }
 
-int Put(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap){
-    int ret = 0;
-    ret = _Put(item, tag, hashmap, SINGLE_ASSIGNMENT_ENFORCED);
-    return ret;
+int cncPut(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap){
+    return _Put(item, tag, tagLength, hashmap, SINGLE_ASSIGNMENT_ENFORCED);
 }
 
-int PutIfAbsent(ocrGuid_t item, char * tag, ItemCollectionEntry ** hashmap){
-    int ret = 0;
-    ret = _Put(item, tag, hashmap, SKIP_SINGLE_ASSIGNMENT);
-    return ret;
+int cncPutIfAbsent(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap){
+    return _Put(item, tag, tagLength, hashmap, SKIP_SINGLE_ASSIGNMENT);
 }
 
 /* Register a step as a consumer of the item in the hasmap */
-
-void __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap,
-        ocrGuid_t stepToRegister, u32 slot) {
-    ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, CNC_GET_ENTRY, SINGLE_ASSIGNMENT_ENFORCED);
-
+void __cncRegisterConsumer(char * tag, int tagLength,
+        ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot) {
+    ItemCollectionEntry * entry = allocateEntryIfAbsent(hashmap, tag, tagLength, CNC_GET_ENTRY, SINGLE_ASSIGNMENT_ENFORCED);
     ocrAddDependence(entry->event, stepToRegister, slot, DB_DEFAULT_MODE);
-
 }
 
-
-
-char* createTag(int no_args, ...)
-{
-    va_list argp;
-    va_start(argp, no_args);
-    int count = 0;
-    int n = no_args, i;
-    for( ; n>=0; n--)
-    {
-        int k = va_arg(argp, int);
-        if (k == 0) count++;
-        else while(k>0){  k = k/10; count++; }
-        count++;
-    }
-    va_end(argp);
-
-    n = no_args;
-    char* tag = (char*) cnc_malloc ( (count+1) *sizeof(char) );
-
-    char pattern[3*n];
-    for(i=0; i<n; i++){
-        pattern[3*i] = '%';
-        pattern[3*i+1] = 'd';
-        pattern[3*i+2] = ' ';
-    }
-    pattern[3*n-1] = '\0';
-
-    va_list argp2;
-    va_start(argp2, no_args);
-    vsprintf(tag, pattern, argp2);
-    va_end(argp2);
-    return tag;
-}
-
-int getTag(char* tag, int pos)
-{
-        int i = -1;
-        int ssize = strlen(tag) + 1;
-        char copy [ssize];
-        strcpy(copy, tag);
-        char * p = &(copy[0]);
-        char * r = p;
-        char * prev = r;
-        while(i < pos){
-                if(p[0] == ' ' || p[0] == '\0'){
-                        i++;
-                        r = prev;
-                        prev = p+1;
-                        if(p[0] == '\0')
-                                break;
-                        p[0] = '\0';
-                }
-                p++;
-        }
-        if(i == pos){
-                return atoi(r);
-        }
-        PRINTF("Could not retrive position %d from tag (%s)\n", pos, tag);
-        ASSERT( 0 );
-        return -1;
-}
-
-
-ocrGuid_t getEdt ( u32 paramc, u64 * paramv, u32 depc, ocrEdtDep_t depv[]) {
-
-    return depv[0].guid;
-}
-
-ocrGuid_t cncGet(char* tag, ItemCollectionEntry ** hashmap)
-{
-
-    ocrGuid_t edt_guid;
-    ocrGuid_t done_guid;
-
-    ocrGuid_t tmp_guid;
-    ocrEdtTemplateCreate(&tmp_guid, getEdt, 0, 1);
-
-    ocrEdtCreate(&edt_guid, tmp_guid,
-                  /*paramc=*/0, /*paramv=*/NULL,
-                  /*depc=*/1, /*depv=*/NULL, 
-                  /*properties=*/EDT_PROP_FINISH, /*affinity*/NULL_GUID,
-                  /*outEvent=*/&done_guid);
-    __registerConsumer(tag, hashmap, edt_guid, 0);
-    //ocrEdtExecute(edt_guid);
-    return done_guid;
-}

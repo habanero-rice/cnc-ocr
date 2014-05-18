@@ -38,7 +38,7 @@
       if(code == CNC_ABORT) return 0;\
    } while(0);
 
-#define CNC_ASSERT(check, msg) { ASSERT((check) && msg); }
+#define CNC_ASSERT(check, msg) do { ASSERT((check) && msg); } while (0)
 
 /* squelch unused variable warnings */
 #define MAYBE_UNUSED(x) ((void)x)

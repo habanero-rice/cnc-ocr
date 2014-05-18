@@ -47,6 +47,7 @@ public class CncHcGenerator extends AbstractVisitor
 	Map<String, ArrayList<String>> tag_steps = new LinkedHashMap<String, ArrayList<String>>(); // List of steps prescribed by each tag
 	
 	Map<String, Iitem_type> all_items = new LinkedHashMap<String, Iitem_type>(); //all ItemCollections names and their types
+	Map<String, CollectionLocal> items_tag_info = new LinkedHashMap<String, CollectionLocal>(); // tag function info for item collections
 	Map<String, tag_type_local> all_tags = new LinkedHashMap<String, tag_type_local>(); // all TagCollections names and their types
 	Map<String, step_info_local> steps_identifiers = new LinkedHashMap<String, step_info_local>();//all CPU StepCollections and their associated information (inputs, outputs, affinites...)
 	List<String> steps_name_list = new ArrayList<String>();
@@ -308,6 +309,22 @@ public class CncHcGenerator extends AbstractVisitor
 		return false;
 	}
 
+	private void saveItemTagInfo(String collName, CollectionLocal coll) {
+		System.out.println(collName + " =?= " + coll.name);
+		CollectionLocal origColl = items_tag_info.get(collName);
+		if (coll != null) {
+			int firstSize = origColl.tag_functions.size();
+			int currentSize  = coll.tag_functions.getLast().size();
+			if (currentSize != firstSize) {
+				System.err.printf("Mismatch in tag component count for `%s'. Original tag had %d components, and a later tag has %d components.%n", collName, firstSize, currentSize);
+				System.exit(-1);
+			}
+		}
+		else {
+			items_tag_info.put(collName, coll);
+		}
+	}
+
 	/**
 	 * Visit StepExecution rule and gather information about steps, items read and written and tag written
 	 */
@@ -382,6 +399,7 @@ public class CncHcGenerator extends AbstractVisitor
 					TagFunctionVisitor tf_v = new TagFunctionVisitor(scList, scList_old);
 					tc_List.accept(tf_v);
 					input.tag_functions.add(tf_v.tag_functionList);
+					saveItemTagInfo(instanceName, input);
 				}
 			}
 			else if (instance instanceof tag_instance){
@@ -410,6 +428,7 @@ public class CncHcGenerator extends AbstractVisitor
 					TagFunctionVisitor tf_v = new TagFunctionVisitor(scList, scList_old);
 					tc_List.accept(tf_v);
 					output.tag_functions.add(tf_v.tag_functionList);
+					saveItemTagInfo(instanceName, output);
 				}
 
 			} else if (instance instanceof tag_instance){
@@ -956,7 +975,7 @@ public class CncHcGenerator extends AbstractVisitor
 		else{
 			function_definition.append(" ... ");
 			buffer_commonh.append(function_definition+" );\n");
-			buffer_commonhc.append("\t/* call __registerConsumer is (tag, context->item_coll, ocrGuid_t, dep_index++); for each dep added\n");
+			buffer_commonhc.append("\t/* call __cncRegisterConsumer is (tag, context->item_coll, ocrGuid_t, dep_index++); for each dep added\n");
 			buffer_commonhc.append("\t   then call the step: */\n\n");
 			buffer_commonhc.append("\t" + step_name + "( " + " ... " + ");\n");
 		}
@@ -967,10 +986,10 @@ public class CncHcGenerator extends AbstractVisitor
 		buffer_commonhc.append("/*\n" + step_name + " dependency adding implementation\n*/\n");
 		buffer_commonhc.append("void " + step_name + "_dependencies(char *tag, Context *context){\n");
 		if(all_tag_functions_present){
-			GenerateInputData("__registerConsumer", sil, buffer_commonhc, step_name, null);
+			GenerateInputData("__cncRegisterConsumer", sil, buffer_commonhc, step_name, null);
 		}
 		else{
-			buffer_commonhc.append("/* The function prototype for __registerConsumer is (tag, context->item_coll, ocrGuid_t, dep_index)*/\n");
+			buffer_commonhc.append("/* The function prototype for __cncRegisterConsumer is (tag, context->item_coll, ocrGuid_t, dep_index)*/\n");
 			buffer_commonhc.append("/* Note: All gets MUST be mentioned as dependencies in OCR */\n");
 		}
 		buffer_commonhc.append("}\n\n");
@@ -1088,17 +1107,17 @@ public class CncHcGenerator extends AbstractVisitor
 		for(int sili = 0; sili < size; sili++){
 			step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
 			if(sc.getname() != null){
-				out.append(String.format("\t%s%s = getTag(%s, %s); MAYBE_UNUSED(%s);%n",
+				out.append(String.format("\t%s%s = CNC_GET_FROM_TAG(%s, %s); MAYBE_UNUSED(%s);%n",
 				                         indextype, sc.getname(), tagNameOCR, sili, sc.getname()));
 				prototype1.append(indextype + sc.getname() +", ");
 				prototype2.append(sc.getname()+", ");
 			}
 			else{
-				out.append("\t" + indextype + sc.getstart_range() + " = getTag("+tagNameOCR+", "+sili+");\n");
+				out.append("\t" + indextype + sc.getstart_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
 				prototype1.append(indextype + sc.getstart_range() +", ");
 				prototype2.append(sc.getstart_range()+", ");
 				sili++;
-				out.append("\t" + indextype + sc.getend_range() + " = getTag("+tagNameOCR+", "+sili+");\n");
+				out.append("\t" + indextype + sc.getend_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
 				prototype1.append(indextype + sc.getend_range() +", ");
 				prototype2.append(sc.getend_range()+", ");
 				size++;
