@@ -558,8 +558,6 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contexth.println("Context *initGraph();");
 			stream_contexth.println("void deleteGraph(Context *CnCGraph);");
 			stream_contexth.println();
-			stream_contexth.printf("void cncPrescribe_cncEnvOut(%s);%n", environment.prescriberArgs);
-			stream_contexth.println();
 			stream_contexth.println("#endif /*_CONTEXT*/");
 			stream_contexth.println();
 		}
@@ -724,6 +722,8 @@ public class CncHcGenerator extends AbstractVisitor
 				String argList = si.prescriberArgs.replace(" Context ", " struct Context ");
 				stream_dispatchh.printf("void cncPrescribe_%s(%s);%n", step_name, argList);
 			}
+			String argList = environment.prescriberArgs.replace(" Context ", " struct Context ");
+			stream_dispatchh.printf("void __cncPrescribe_cncEnvOut(%s);%n", argList);
 			stream_dispatchh.println();
 			
 			if(fullauto){
