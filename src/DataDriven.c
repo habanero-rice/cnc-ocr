@@ -43,7 +43,7 @@ static unsigned long hash_function(unsigned char *str, int length) {
  */
 static ItemCollectionEntry * allocateEntryIfAbsent(
         ItemCollectionEntry * volatile * hashmap, unsigned char * tag,
-        int length, char creator, char isSingleAssignment) {
+        int length, char creator, bool isSingleAssignment) {
     int index = (hash_function(tag, length)) % TABLE_SIZE;
     ItemCollectionEntry * volatile current = hashmap[index];
 
@@ -107,7 +107,7 @@ static ItemCollectionEntry * allocateEntryIfAbsent(
 }
 
 /* Putting an item into the hashmap */
-static int _Put(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap, char isSingleAssignment) {
+int __cncPut(ocrGuid_t item, char *tag, int tagLength, ItemCollectionEntry ** hashmap, bool isSingleAssignment) {
     
     CNC_ASSERT(tag != NULL, "Put - ERROR================%p\n");
 
@@ -124,14 +124,6 @@ static int _Put(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry *
     ocrEventSatisfy(entry->event, item);
 
     return PUT_SUCCESS;
-}
-
-int cncPut(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap){
-    return _Put(item, tag, tagLength, hashmap, SINGLE_ASSIGNMENT_ENFORCED);
-}
-
-int cncPutIfAbsent(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap){
-    return _Put(item, tag, tagLength, hashmap, SKIP_SINGLE_ASSIGNMENT);
 }
 
 /* Register a step as a consumer of the item in the hasmap */

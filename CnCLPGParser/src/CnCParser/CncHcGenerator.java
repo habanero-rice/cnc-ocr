@@ -47,7 +47,8 @@ public class CncHcGenerator extends AbstractVisitor
 	Map<String, ArrayList<String>> tag_steps = new LinkedHashMap<String, ArrayList<String>>(); // List of steps prescribed by each tag
 	
 	Map<String, Iitem_type> all_items = new LinkedHashMap<String, Iitem_type>(); //all ItemCollections names and their types
-	Map<String, CollectionLocal> items_tag_info = new LinkedHashMap<String, CollectionLocal>(); // tag function info for item collections
+	Map<String, List<String>> items_tag_info = new LinkedHashMap<String,  List<String>>(); // tag function info for item collections
+	Map<String, List<String>> steps_tag_info = new LinkedHashMap<String,  List<String>>(); // tag function info for step collections
 	Map<String, tag_type_local> all_tags = new LinkedHashMap<String, tag_type_local>(); // all TagCollections names and their types
 	Map<String, step_info_local> steps_identifiers = new LinkedHashMap<String, step_info_local>();//all CPU StepCollections and their associated information (inputs, outputs, affinites...)
 	List<String> steps_name_list = new ArrayList<String>();
@@ -55,11 +56,12 @@ public class CncHcGenerator extends AbstractVisitor
 	step_info_local environment = null;
 	StringBuilder envOutFunc = new StringBuilder();
 	
-	String GET = "CNC_GET";
+	static final String GET = "CNC_GET";
 	String default_err = "Unable to generate code without this information";
 	String fullAutoUserDefined = "_userDefined";
 	String mainUsesGraphOutputs = "useGraphOutputs";
 	private static final String cudaTail = "_kernelCaller";
+	static final String TC_TYPE = "int";
 
 	String filename; // the name of the file containing the CnC program we are compiling
 	String dir ="";
@@ -106,6 +108,7 @@ public class CncHcGenerator extends AbstractVisitor
 	private class step_info_local{
 		String step_name;
 		StringBuilder prototype_withtypes, prototype_withouttypes;
+		String prescriberArgs;
 		step_componentList identifiers; //keep the names of the first encounter; second encounter - match/change the names to the first
 		String prescribing_tag;
 		Map<String, InputCollectionLocal> inputs;
@@ -309,19 +312,37 @@ public class CncHcGenerator extends AbstractVisitor
 		return false;
 	}
 
-	private void saveItemTagInfo(String collName, CollectionLocal coll) {
-		System.out.println(collName + " =?= " + coll.name);
-		CollectionLocal origColl = items_tag_info.get(collName);
-		if (coll != null) {
-			int firstSize = origColl.tag_functions.size();
-			int currentSize  = coll.tag_functions.getLast().size();
+	private void saveStepTagInfo(step_info_local coll) {
+		saveTagInfo(coll.step_name, (List<?>)coll.identifiers.getList(), steps_tag_info);
+	}
+
+	private void saveItemTagInfo(CollectionLocal coll) {
+		List<?> tagRaw = coll.tag_functions.getLast();
+		List<String> tag = new ArrayList<String>();
+		for (int i=0; i<tagRaw.size(); i++) tag.add("kc"+i);
+		saveTagInfo(coll.name, tag, items_tag_info);
+	}
+
+	private void saveTagInfo(String collName, List<?> components, Map<String, List<String>> mapping) {
+		List<String> origTagFunc = mapping.get(collName);
+		if (origTagFunc != null) {
+			int firstSize = origTagFunc.size();
+			int currentSize  = components.size();
 			if (currentSize != firstSize) {
 				System.err.printf("Mismatch in tag component count for `%s'. Original tag had %d components, and a later tag has %d components.%n", collName, firstSize, currentSize);
+				System.err.println(origTagFunc);
+				System.err.println(components);
 				System.exit(-1);
 			}
 		}
+		else if (components.isEmpty()) {
+			System.err.printf("Collection `%s' has an empty tag.%n", collName);
+			System.exit(-1);
+		}
 		else {
-			items_tag_info.put(collName, coll);
+			origTagFunc = new LinkedList<String>();
+			for (Object o : components) origTagFunc.add(o.toString());
+			mapping.put(collName, origTagFunc);
 		}
 	}
 
@@ -365,6 +386,7 @@ public class CncHcGenerator extends AbstractVisitor
 				}
 				si_local.identifiers = scList;
 				si_local.init = true;
+				saveStepTagInfo(si_local);
 			}
 			else{ //if previous scList exists, store old one in scList_old
 				//make sure they are the same, else print error
@@ -399,7 +421,7 @@ public class CncHcGenerator extends AbstractVisitor
 					TagFunctionVisitor tf_v = new TagFunctionVisitor(scList, scList_old);
 					tc_List.accept(tf_v);
 					input.tag_functions.add(tf_v.tag_functionList);
-					saveItemTagInfo(instanceName, input);
+					saveItemTagInfo(input);
 				}
 			}
 			else if (instance instanceof tag_instance){
@@ -428,7 +450,7 @@ public class CncHcGenerator extends AbstractVisitor
 					TagFunctionVisitor tf_v = new TagFunctionVisitor(scList, scList_old);
 					tc_List.accept(tf_v);
 					output.tag_functions.add(tf_v.tag_functionList);
-					saveItemTagInfo(instanceName, output);
+					saveItemTagInfo(output);
 				}
 
 			} else if (instance instanceof tag_instance){
@@ -458,8 +480,7 @@ public class CncHcGenerator extends AbstractVisitor
 	//
 	// At the very end, we have all the information to generate the HC source code
 	//
-	public void endVisit(statementList n)
-	{
+	public void endVisit(statementList n) {
 		//fill in additional info for steps:		
 		for(String tag_name : tag_steps.keySet()){
 			ArrayList<String> list_of_steps = tag_steps.get(tag_name);
@@ -507,28 +528,16 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contexth.println("#include \"Dispatch.h\"");
 			stream_contexth.println();
 			
-			// Step function types
-			stream_contexth.println("typedef void (*StepDependenceFunction)(char *, struct Context *);");	
-			stream_contexth.println();	
-			stream_contexth.println("typedef struct {");	
-			stream_contexth.println("\tStepDependenceFunction depf;");
-			stream_contexth.println("\tcncHandle_t taskTemplate;");
-			stream_contexth.println("} StepFunctionInfo;");
-			stream_contexth.println();	
-
 			//Generate "struct Context"
 			stream_contexth.println("typedef struct Context {");	
 			for (String item_collection_name : all_items.keySet()) {
-				stream_contexth.println("\tItemCollectionEntry ** "+item_collection_name +";");
+				stream_contexth.printf("\tItemCollectionEntry **%s;%n", item_collection_name);
 			}
 			for (String step_name : steps_name_list) {
-				stream_contexth.printf("\tStepFunctionInfo %s;%n", step_name);
+				stream_contexth.printf("\tocrGuid_t %s;%n", step_name);
 			}
 			stream_contexth.println("\tocrGuid_t cncEnvOutTag;");
 			stream_contexth.println("} Context;");
-			stream_contexth.println();
-			
-			stream_contexth.println("");
 			stream_contexth.println();
 
 			// Generate item collection entry types
@@ -539,15 +548,17 @@ public class CncHcGenerator extends AbstractVisitor
 			}
 			stream_contexth.println();
 
-			// Generate item instance creation function prototypes
-			writeItemCreators(stream_contexth, true);
+			// Generate collection-specific functions
+			declareItemCreators(stream_contexth, true);
+			stream_contexth.println();
+			declarePutters(stream_contexth, true);
 			stream_contexth.println();
 
 			//Generate "initGraph" and "deleteGraph" function prototypes
 			stream_contexth.println("Context *initGraph();");
 			stream_contexth.println("void deleteGraph(Context *CnCGraph);");
 			stream_contexth.println();
-			stream_contexth.println("void setEnvOutTag(char *outTag, Context *context);");
+			stream_contexth.printf("void cncPrescribe_cncEnvOut(%s);%n", environment.prescriberArgs);
 			stream_contexth.println();
 			stream_contexth.println("#endif /*_CONTEXT*/");
 			stream_contexth.println();
@@ -559,7 +570,35 @@ public class CncHcGenerator extends AbstractVisitor
 		}
 	}
 
-	private void writeItemCreators(PrintStream out, boolean prototypesOnly) {
+	private void declarePutters(PrintStream out, boolean prototypesOnly) {
+		for (Map.Entry<String, List<String>> itemInfo : items_tag_info.entrySet()) {
+			String collName = itemInfo.getKey();
+			List<String> varsList = itemInfo.getValue();
+			StringBuilder vars = new StringBuilder();
+			StringBuilder typedVars = new StringBuilder();
+			for (String v : varsList) {
+				vars.append(String.format(", %s", v));
+				typedVars.append(String.format(", %s %s", TC_TYPE, v));
+			}
+			out.printf("void cncPutChecked_%s(cncHandle_t handle%s, bool checkSingleAssignment, Context *context)", collName, typedVars);
+			// End function prototype or write function body
+			if (prototypesOnly) {
+				out.println(";");
+				out.printf("#define cncPut_%s(handle%s, context) ", collName, vars);
+				out.printf("cncPutChecked_%s(handle%s, true, context)%n", collName, vars);
+			}
+			else {
+				out.println(" {");
+				out.printf("\tCncTagComponent tag[] = {%s };%n", vars.substring(1));
+				out.print("\t__cncPut(handle, (char*)&tag, sizeof(tag), ");
+				out.printf("context->%s, checkSingleAssignment);%n", collName);
+				out.println("}");
+				out.println();
+			}
+		}
+	}
+
+	private void declareItemCreators(PrintStream out, boolean prototypesOnly) {
 		for (Map.Entry<String, Iitem_type> item_coll : all_items.entrySet()) {
 			String collName = item_coll.getKey();
 			String collType = item_coll.getValue().toString().trim() + "*";
@@ -603,14 +642,13 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println();
 			
 			//Generate "initGraph" method
-			stream_contextc.println("Context *initGraph()");
-			stream_contextc.println("{"); 
+			stream_contextc.println("Context *initGraph() {");
 			stream_contextc.println("\tint i;");
-			stream_contextc.println("\tContext *CnCGraph = (Context*) cnc_malloc (1 * sizeof(Context));\n");
+			stream_contextc.println("\tContext *CnCGraph = (Context*)cnc_malloc(sizeof(Context));\n");
 			stream_contextc.println();
 			StringBuilder sb = new StringBuilder();
 			for (String item_collection_name : all_items.keySet()) {
-				stream_contextc.println("\tCnCGraph->"+item_collection_name +" = (ItemCollectionEntry**) cnc_malloc (TABLE_SIZE * sizeof(ItemCollectionEntry*));");
+				stream_contextc.printf("\tCnCGraph->%s = cnc_malloc(TABLE_SIZE * sizeof(ItemCollectionEntry*));%n", item_collection_name);
 				sb.append("CnCGraph->"+item_collection_name + "[i] = ");
 			}
 			stream_contextc.println();
@@ -619,9 +657,9 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("\t}");
 			stream_contextc.println();
 			for (String step_name : steps_name_list) {
-				stream_contextc.printf("\tCnCGraph->%s.depf = %s_dependencies;%n", step_name, step_name);
-				stream_contextc.printf("\tocrEdtTemplateCreate(&CnCGraph->%s.taskTemplate, %s_gets, 2, %s);%n",
-				                       step_name, step_name, "EDT_PARAM_UNK");
+				stream_contextc.printf(
+						"\tocrEdtTemplateCreate(&CnCGraph->%s, %s_gets, %s, %s);%n",
+						step_name, step_name, "EDT_PARAM_UNK", "EDT_PARAM_UNK");
 			}
 			stream_contextc.println();
 			stream_contextc.println("\tocrEventCreate(&(CnCGraph->cncEnvOutTag), OCR_EVENT_ONCE_T, true);");
@@ -630,12 +668,12 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("}");
 			stream_contextc.println();
 			
-			// Generate item instance creation functions
-			writeItemCreators(stream_contextc, false);
+			// Generate collection-specific functions
+			declareItemCreators(stream_contextc, false);
+			declarePutters(stream_contextc, false);
 
 			//Generate "deleteGraph" method
-			stream_contextc.println("void deleteGraph(Context *CnCGraph)");
-			stream_contextc.println("{"); 
+			stream_contextc.println("void deleteGraph(Context *CnCGraph) {");
 			for (String item_collection_name : all_items.keySet()) {
 				stream_contextc.println("\tcnc_free(CnCGraph->"+item_collection_name +");");
 			}
@@ -643,11 +681,15 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.println("\tcnc_free(CnCGraph);");
 			stream_contextc.println("}");
 			stream_contextc.println();
-			stream_contextc.println("void setEnvOutTag(char *tag, Context *context) {");
-			stream_contextc.println("\tchar *tagPtr;");
+			stream_contextc.printf("void cncPrescribe_cncEnvOut(%s) {%n", environment.prescriberArgs);
+			stream_contextc.println("\tCncTagComponent *tagPtr;");
 			stream_contextc.println("\tocrGuid_t tagGuid;");
-			stream_contextc.println("\tCNC_CREATE_ITEM(&tagGuid, (void**)&tagPtr, strlen(tag));");
-			stream_contextc.println("\tstrcpy(tagPtr, tag);");
+			stream_contextc.println("\tint i=0;");
+			stream_contextc.printf("\tint tagSize = sizeof(CncTagComponent) * %s;%n", environment.identifiers.size());
+			stream_contextc.println("\tCNC_CREATE_ITEM(&tagGuid, (void**)&tagPtr, tagSize);");
+			for (Object o : environment.identifiers.getList()) {
+				stream_contextc.printf("\ttagPtr[i++] = %s;%n", o);
+			}
 			stream_contextc.println("\tocrEventSatisfy(context->cncEnvOutTag, tagGuid);");
 			stream_contextc.println("}");
 		}
@@ -677,7 +719,10 @@ public class CncHcGenerator extends AbstractVisitor
 			//Generate "xxx_gets" and "xxx_dependencies" function prototypes
 			for (String step_name : steps_name_list) {
 				stream_dispatchh.println("ocrGuid_t " + step_name + "_gets(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]);");
-				stream_dispatchh.println("void " + step_name + "_dependencies(char *tag, struct Context *context);");
+				step_info_local si = steps_identifiers.get(step_name);
+				if (si == null) si = environment;
+				String argList = si.prescriberArgs.replace(" Context ", " struct Context ");
+				stream_dispatchh.printf("void cncPrescribe_%s(%s);%n", step_name, argList);
 			}
 			stream_dispatchh.println();
 			
@@ -731,9 +776,13 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println();
 			stream_dispatchhc.println("ocrGuid_t cncEnvOutEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\t// Pull the tag");
-			stream_dispatchhc.println("\tchar *stepTag = depv[0].ptr;");
+			stream_dispatchhc.println("\tCncTagComponent *stepTag = depv[0].ptr;");
 			stream_dispatchhc.println("\t// Schedule user's ocrEnvOut function");
-			stream_dispatchhc.println("\tcncEnvOut_dependencies(stepTag, (Context*)paramv[0]);");
+			stream_dispatchhc.print("\t__cncPrescribe_cncEnvOut(");
+			for (int i=0; i<environment.identifiers.size(); i++) {
+				stream_dispatchhc.printf("stepTag[%d], ", i);
+			}
+			stream_dispatchhc.println("(Context*)paramv[0]);");
 			stream_dispatchhc.println("\treturn NULL_GUID;");
 			stream_dispatchhc.println("}");
 			stream_dispatchhc.println();
@@ -746,21 +795,31 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_dispatchhc.println();
 			stream_dispatchhc.println("ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {");
 			stream_dispatchhc.println("\tContext *context = initGraph();");
+			stream_dispatchhc.println("\t#ifdef CNC_UNCLEAN_FINISH");
+			stream_dispatchhc.println("\tu16 envInProps = EDT_PROP_NONE;");
+			stream_dispatchhc.println("\tocrGuid_t graphDoneGuid = NULL_GUID;");
+			stream_dispatchhc.println("\tocrGuid_t *graphDoneGuidPtr = NULL;");
+			stream_dispatchhc.println("\t#else");
+			stream_dispatchhc.println("\tu16 envInProps = EDT_PROP_FINISH;");
+			stream_dispatchhc.println("\tocrGuid_t graphDoneGuid;");
+			stream_dispatchhc.println("\tocrGuid_t *graphDoneGuidPtr = &graphDoneGuid;");
+			stream_dispatchhc.println("\t#endif");
 			stream_dispatchhc.println("\t// Create ocrEnvInEdt as a finish EDT");
 			stream_dispatchhc.println("\tocrGuid_t inEdtGuid, templGuid;");
 			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvInEdt, 1, 1);");
 			stream_dispatchhc.println("\tocrEdtCreate(&inEdtGuid, templGuid,");
 			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
 			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,");
-			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_NONE,");
-			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);");
+			stream_dispatchhc.println("\t\t/*properties=*/envInProps,");
+			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/graphDoneGuidPtr);");
 			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
 			stream_dispatchhc.println("\t// Create ocrEnvOutEdt as a finish EDT waiting on EnvIn");
 			stream_dispatchhc.println("\tocrGuid_t outEdtGuid, outputDoneGuid;");
-			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, 1);");
+			stream_dispatchhc.println("\tocrGuid_t outDeps[] = { context->cncEnvOutTag, graphDoneGuid };");
+			stream_dispatchhc.println("\tocrEdtTemplateCreate(&templGuid, cncEnvOutEdt, 1, sizeof(outDeps)/sizeof(ocrGuid_t));");
 			stream_dispatchhc.println("\tocrEdtCreate(&outEdtGuid, templGuid,");
 			stream_dispatchhc.println("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/(u64*)&context,");
-			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/&context->cncEnvOutTag,");
+			stream_dispatchhc.println("\t\t/*depc=*/EDT_PARAM_DEF, /*depv=*/outDeps,");
 			stream_dispatchhc.println("\t\t/*properties=*/EDT_PROP_FINISH,");
 			stream_dispatchhc.println("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/&outputDoneGuid);");
 			stream_dispatchhc.println("\tocrEdtTemplateDestroy(templGuid);");
@@ -824,10 +883,9 @@ public class CncHcGenerator extends AbstractVisitor
 
 				List<Object> envIds = (List<Object>)environment.identifiers.getList();
 				stream_mainhc.println("\t/*");
-				stream_mainhc.printf("\tchar *envOutTag = createTag(%s", envIds.size());
+				stream_mainhc.print("\tcncPrescribe_cncEnvOut(");
 				for (Object id : envIds) stream_mainhc.printf(", %s", id);
-				stream_mainhc.println(");");
-				stream_mainhc.println("\tsetEnvOutTag(envOutTag, context);");
+				stream_mainhc.println("context);");
 				stream_mainhc.println("\t*/");
 				stream_mainhc.println("}");
 				stream_mainhc.println();
@@ -953,6 +1011,8 @@ public class CncHcGenerator extends AbstractVisitor
 	}
 	
 	private int generateStepHelpers(String step_name, step_info_local sil, int global_index, StringBuilder buffer_commonh, StringBuilder buffer_commonhc, StringBuilder function_definition) {
+		// TODO - this is kind of a hack. there should be a nicer way.
+		String prefix = (sil == environment) ? "__" : "";
 
 		// GETS
 		buffer_commonhc.append("/*\n" + step_name + " gets implementation\n*/\n");
@@ -960,38 +1020,32 @@ public class CncHcGenerator extends AbstractVisitor
 		
 		buffer_commonh.append("void " + step_name + "( ");
 		
+		LinkedList<StringBuilder> prototypeList = new LinkedList<StringBuilder>();
 		if(all_tag_functions_present){
-			LinkedList<StringBuilder> prototypeList = new LinkedList<StringBuilder>();
 			global_index = GenerateInputData(GET, sil, buffer_commonhc, step_name, prototypeList);
 			function_definition.append(prototypeList.get(0).toString());
 			buffer_commonh.append(function_definition+" );\n");
 			buffer_commonhc.append("\t" + step_name + "( " + prototypeList.get(1).toString() + " );\n");
 			
 			String tmp = prototypeList.get(0).toString();
-			sil.prototype_withtypes.append(tmp.substring(0,tmp.lastIndexOf(",")));
+			tmp = tmp.substring(0,tmp.lastIndexOf(","));
+			sil.prototype_withtypes.append(tmp);
 			tmp = prototypeList.get(1).toString();
-			sil.prototype_withouttypes.append(tmp.substring(0,tmp.lastIndexOf(",")));
+			tmp = tmp.substring(0,tmp.lastIndexOf(","));
+			sil.prototype_withouttypes.append(tmp);
 		}
-		else{
-			function_definition.append(" ... ");
-			buffer_commonh.append(function_definition+" );\n");
-			buffer_commonhc.append("\t/* call __cncRegisterConsumer is (tag, context->item_coll, ocrGuid_t, dep_index++); for each dep added\n");
-			buffer_commonhc.append("\t   then call the step: */\n\n");
-			buffer_commonhc.append("\t" + step_name + "( " + " ... " + ");\n");
-		}
+		else throw new RuntimeException("All tag functions should be present.");
 		buffer_commonhc.append("\treturn NULL_GUID;\n");
 		buffer_commonhc.append("}\n\n");
 
 		// DEPS
+		String depsProto = prototypeList.get(2).toString();
 		buffer_commonhc.append("/*\n" + step_name + " dependency adding implementation\n*/\n");
-		buffer_commonhc.append("void " + step_name + "_dependencies(char *tag, Context *context){\n");
+		buffer_commonhc.append("void "+prefix+"cncPrescribe_" + step_name + "("+depsProto+"){\n");
 		if(all_tag_functions_present){
 			GenerateInputData("__cncRegisterConsumer", sil, buffer_commonhc, step_name, null);
 		}
-		else{
-			buffer_commonhc.append("/* The function prototype for __cncRegisterConsumer is (tag, context->item_coll, ocrGuid_t, dep_index)*/\n");
-			buffer_commonhc.append("/* Note: All gets MUST be mentioned as dependencies in OCR */\n");
-		}
+		else throw new RuntimeException("All tag functions should be present.");
 		buffer_commonhc.append("}\n\n");
 
 		return global_index;
@@ -1027,6 +1081,9 @@ public class CncHcGenerator extends AbstractVisitor
 				out.println();
 				out.println("# include header globally for user-defined types");
 				out.println("#CFLAGS+=-include user_types.h");
+				out.println();
+				out.println("# shut down CnC runtime even if some steps never finish");
+				out.println("#CFLAGS+=-DCNC_UNCLEAN_FINISH");
 				out.println();
 				out.println("compile: $(TARGET)");
 				out.println();
@@ -1066,13 +1123,10 @@ public class CncHcGenerator extends AbstractVisitor
 	private int GenerateInputData(String function_name, step_info_local sil, StringBuilder out, String step_name, LinkedList<StringBuilder> prototypeList){
 		StringBuilder prototype1 = new StringBuilder();
 		StringBuilder prototype2 = new StringBuilder();
+		StringBuilder prototype3 = new StringBuilder();
+		StringBuilder prototype4 = new StringBuilder();
 		LinkedList<StringBuilder> prototypeListIn = new LinkedList<StringBuilder>();
 
-		String tagNameOCR="tag";
-		if(function_name==GET){
-			out.append("\tContext *context = (Context*)paramv[1];\n");
-			tagNameOCR="(char*)paramv[0]";
-		}
 		int global_index = 0;
 		String indextype;
 		if(sil.prescribing_tag != null){
@@ -1106,30 +1160,39 @@ public class CncHcGenerator extends AbstractVisitor
 		int counter = 0;
 		for(int sili = 0; sili < size; sili++){
 			step_component sc = (step_component) sil.identifiers.getstep_componentAt(counter);
-			if(sc.getname() != null){
-				out.append(String.format("\t%s%s = CNC_GET_FROM_TAG(%s, %s); MAYBE_UNUSED(%s);%n",
-				                         indextype, sc.getname(), tagNameOCR, sili, sc.getname()));
+			if(sc.getname() != null) {
+				if (function_name == GET) {
+					out.append(String.format("\t%s%s = (%s)paramv[%s]; MAYBE_UNUSED(%s);%n",
+											 indextype, sc.getname(), indextype, sili, sc.getname()));
+				}
 				prototype1.append(indextype + sc.getname() +", ");
 				prototype2.append(sc.getname()+", ");
+				prototype3.append(indextype + sc.getname() +", ");
+				prototype4.append("(u64)"+sc.getname()+", ");
 			}
-			else{
-				out.append("\t" + indextype + sc.getstart_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
+			else {
+				throw new RuntimeException("Shouldn't have ranges in step tags.");
+				/*out.append("\t" + indextype + sc.getstart_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
 				prototype1.append(indextype + sc.getstart_range() +", ");
 				prototype2.append(sc.getstart_range()+", ");
 				sili++;
 				out.append("\t" + indextype + sc.getend_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
 				prototype1.append(indextype + sc.getend_range() +", ");
 				prototype2.append(sc.getend_range()+", ");
-				size++;
+				size++;*/
 			}
 			counter ++;
 		}
+		if (function_name == GET) {
+			out.append("\tContext *context = (Context*)paramv["+size+"];\n");
+		}
+		prototype4.append("(u64)context");
 
 		if(function_name != GET) {
 			out.append("\n\tocrGuid_t edt_guid;\n");
-			out.append("\tu64 args[] = { (u64)"+tagNameOCR+", (u64)context };\n");
-			out.append("\tocrEdtCreate(&edt_guid, context->"+step_name+".taskTemplate,\n");
-			out.append("\t\t/*paramc=*/EDT_PARAM_DEF, /*paramv=*/args,\n");
+			out.append("\tu64 args[] = { "+prototype4+" };\n");
+			out.append("\tocrEdtCreate(&edt_guid, context->"+step_name+",\n");
+			out.append("\t\t/*paramc=*/"+(size+1)+", /*paramv=*/args,\n");
 			out.append("\t\t/*depc=*/0"+step_no_gets.get(step_name)+", /*depv=*/NULL,\n");
 			out.append("\t\t/*properties=*/EDT_PROP_NONE,\n");
 			out.append("\t\t/*affinity=*/NULL_GUID, /*outEvent=*/NULL);\n");
@@ -1155,11 +1218,14 @@ public class CncHcGenerator extends AbstractVisitor
 			step_no_gets.put(step_name, number_of_gets.toString());
 		}
 
-		if(prototypeList != null){
+		if(function_name == GET && prototypeList != null){
 			prototype1.append("Context *context");
 			prototype2.append("context");
+			prototype3.append("Context *context");
 			prototypeList.add(prototype1);
 			prototypeList.add(prototype2);
+			prototypeList.add(prototype3);
+			sil.prescriberArgs = prototype3.toString();
 		}
 
 		return global_index;
@@ -1267,8 +1333,14 @@ public class CncHcGenerator extends AbstractVisitor
 		}
 		// step_dependencies: add dependencies (register) using tags
 		else {
-			out.append(tabs + "char *tag"+ input_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
-			out.append(tabs + function_name +"( tag"+ input_name + index +", context->" +input_name + ", edt_guid, edt_index++);\n");
+			out.append(tabs + "{\n");
+			out.append(String.format(
+					"\t%sCncTagComponent tag[] = { %s };%n",
+					tabs, ilist));
+			out.append(String.format(
+					"\t%s%s((char*)tag, sizeof(tag), context->%s, edt_guid, edt_index++);%n",
+					tabs, function_name, input_name));
+			out.append(tabs + "}\n");
 		}
 
 		out.append(endforloops); // END FOR NEST

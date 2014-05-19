@@ -22,6 +22,7 @@
 typedef ocrGuid_t cncHandle_t;
 
 typedef struct ItemCollectionEntry ItemCollectionEntry;
+typedef s32 CncTagComponent;
 
 /* The structure to hold an item in the item collection */
 struct ItemCollectionEntry {
@@ -33,10 +34,8 @@ struct ItemCollectionEntry {
 
 #define DEPS_BUCKET 3 /* must be >=3 */
 
-int cncPut(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap);
-
-int cncPutIfAbsent(ocrGuid_t item, char * tag, int tagLength, ItemCollectionEntry ** hashmap);
-void  __cncRegisterConsumer(char * tag, int tagLength, ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot);
+int __cncPut(cncHandle_t item, char *tag, int tagLength, ItemCollectionEntry ** hashmap, bool isSingleAssignment);
+void  __cncRegisterConsumer(char *tag, int tagLength, ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot);
 
 /* warning for variadic macro support */
 #if __GNUC__ < 3 && !defined(__clang__) && __STDC_VERSION__ < 199901L && !defined(NO_VARIADIC_MACROS)
@@ -47,7 +46,7 @@ void  __cncRegisterConsumer(char * tag, int tagLength, ItemCollectionEntry * vol
 #define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); exit(1); } } while (0)
 #endif
 
-#define CNC_GET_FROM_TAG(tag, pos) (((int*)(tag))[(pos)]);
+#define CNC_GET_FROM_TAG(tag, pos) (((CncTagComponent*)(tag))[(pos)]);
 #define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle); // free datablock backing an item
 #define CNC_CREATE_ITEM(handle, ptr, size) DBCREATE(handle, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
 #define CNC_NULL_HANDLE NULL_GUID

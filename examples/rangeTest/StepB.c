@@ -11,9 +11,7 @@ void StepB(int i, int j, CollBItem *CollB, Context *context) {
     int *TotalB;
     cncHandle_t TotalB_handle = cncCreateItem_TotalB(&TotalB);
     *TotalB = total;
-
-    char *tagTotalB = CREATE_TAG(i, j);
-    Put(TotalB_handle, tagTotalB, context->TotalB);
+    cncPut_TotalB(TotalB_handle, i, j, context);
 }
 
 
