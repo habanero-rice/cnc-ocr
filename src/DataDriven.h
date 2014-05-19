@@ -34,22 +34,20 @@ struct ItemCollectionEntry {
 
 #define DEPS_BUCKET 3 /* must be >=3 */
 
+#define CNC_SUCCESS 0
+#define CNC_ABORT 1
+
+#define CNC_GET_ENTRY 1
+#define CNC_PUT_ENTRY 2
+
+#define PUT_FAIL 1
+#define PUT_SUCCESS 0
+
+#define SINGLE_ASSIGNMENT_ENFORCED 1
+#define SKIP_SINGLE_ASSIGNMENT 0
+
 int __cncPut(cncHandle_t item, char *tag, int tagLength, ItemCollectionEntry ** hashmap, bool isSingleAssignment);
 void  __cncRegisterConsumer(char *tag, int tagLength, ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot);
-
-/* warning for variadic macro support */
-#if __GNUC__ < 3 && !defined(__clang__) && __STDC_VERSION__ < 199901L && !defined(NO_VARIADIC_MACROS)
-#warning Your compiler might not support variadic macros, in which case the CNC_REQUIRE macro is not supported. You can disable this warning by setting NO_VARIADIC_MACROS to 0, or disable the macro definitions by setting it to 1.
-#endif
-
-#if !NO_VARIADIC_MACROS
-#define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); exit(1); } } while (0)
-#endif
-
-#define CNC_GET_FROM_TAG(tag, pos) (((CncTagComponent*)(tag))[(pos)]);
-#define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle); // free datablock backing an item
-#define CNC_CREATE_ITEM(handle, ptr, size) DBCREATE(handle, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
-#define CNC_NULL_HANDLE NULL_GUID
 
 #endif /* _DATA_DRIVEN_H */
 

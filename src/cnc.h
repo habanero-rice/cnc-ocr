@@ -15,35 +15,22 @@
 #include "cnc_mm.h"
 #include <ocr.h>
 
-#define CNC_SUCCESS 0
-#define CNC_ABORT 1
-
-#define CNC_GET_ENTRY 1
-#define CNC_PUT_ENTRY 2
-
-#define PUT_FAIL 1
-#define PUT_SUCCESS 0
-
-#define SINGLE_ASSIGNMENT_ENFORCED 1
-#define SKIP_SINGLE_ASSIGNMENT 0
-
- /* A macro for CnC Get function. We need to use a macro in order to simulate exceptional behaviour,  
-  * if a step does a Get that returns the special value CNC_ABORT, we need to abort the step instead of continuing 
-  * the execution 
-  */
-#define CNC_GET(result,tag,collection,whoscalling)\
-   do { \
-      int code = __Get(result,tag,collection,whoscalling); \
-      cnc_free(tag);\
-      if(code == CNC_ABORT) return 0;\
-   } while(0);
-
 #define CNC_ASSERT(check, msg) do { ASSERT((check) && msg); } while (0)
 
-/* squelch unused variable warnings */
-#define MAYBE_UNUSED(x) ((void)x)
-
 struct Context;
+
+/* warning for variadic macro support */
+#if __GNUC__ < 3 && !defined(__clang__) && __STDC_VERSION__ < 199901L && !defined(NO_VARIADIC_MACROS)
+#warning Your compiler might not support variadic macros, in which case the CNC_REQUIRE macro is not supported. You can disable this warning by setting NO_VARIADIC_MACROS to 0, or disable the macro definitions by setting it to 1.
+#endif
+
+#if !NO_VARIADIC_MACROS
+#define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); exit(1); } } while (0)
+#endif
+
+#define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle); // free datablock backing an item
+#define CNC_CREATE_ITEM(handle, ptr, size) DBCREATE(handle, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
+#define CNC_NULL_HANDLE NULL_GUID
 
 #endif /* _CNC_H */
 

@@ -917,6 +917,9 @@ public class CncHcGenerator extends AbstractVisitor
 			buffer_commonhc.append("\n");
 			buffer_commonhc.append("#include \"Common.h\"\n\n");
 
+			buffer_commonhc.append("/* squelch unused variable warnings */\n");
+			buffer_commonhc.append("#define MAYBE_UNUSED(x) ((void)x)\n\n");
+
 			File file_commonh = new File (dir + "Common.h");
 			PrintStream stream_commonh = new PrintStream(file_commonh);
 			StringBuilder buffer_commonh = new StringBuilder();
@@ -1172,14 +1175,6 @@ public class CncHcGenerator extends AbstractVisitor
 			}
 			else {
 				throw new RuntimeException("Shouldn't have ranges in step tags.");
-				/*out.append("\t" + indextype + sc.getstart_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
-				prototype1.append(indextype + sc.getstart_range() +", ");
-				prototype2.append(sc.getstart_range()+", ");
-				sili++;
-				out.append("\t" + indextype + sc.getend_range() + " = CNC_GET_FROM_TAG("+tagNameOCR+", "+sili+");\n");
-				prototype1.append(indextype + sc.getend_range() +", ");
-				prototype2.append(sc.getend_range()+", ");
-				size++;*/
 			}
 			counter ++;
 		}
