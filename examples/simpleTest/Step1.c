@@ -7,12 +7,8 @@ void Step1(int k, AiItem Ai, Context *context){
 	int *Bi;
 	cncHandle_t Bi_handle = cncCreateItem_Bi(&Bi, 1);
 	*Bi = *Ai.item + 1;
+	cncPut_Bi(Bi_handle, k, context);
 
-	char *tagBi = CREATE_TAG(k);
-	Put(Bi_handle, tagBi, context->Bi);
-
-	char *tagS2Tag2 = CREATE_TAG(k);
-	CNC_PRESCRIBE(Step2, tagS2Tag2, context);
-
+	cncPrescribe_Step2(k, context);
 }
 

@@ -684,11 +684,11 @@ public class CncHcGenerator extends AbstractVisitor
 			stream_contextc.printf("void cncPrescribe_cncEnvOut(%s) {%n", environment.prescriberArgs);
 			stream_contextc.println("\tCncTagComponent *tagPtr;");
 			stream_contextc.println("\tocrGuid_t tagGuid;");
-			stream_contextc.println("\tint i=0;");
+			stream_contextc.println("\tint _paramI=0;");
 			stream_contextc.printf("\tint tagSize = sizeof(CncTagComponent) * %s;%n", environment.identifiers.size());
 			stream_contextc.println("\tCNC_CREATE_ITEM(&tagGuid, (void**)&tagPtr, tagSize);");
 			for (Object o : environment.identifiers.getList()) {
-				stream_contextc.printf("\ttagPtr[i++] = %s;%n", o);
+				stream_contextc.printf("\ttagPtr[_paramI++] = %s;%n", o);
 			}
 			stream_contextc.println("\tocrEventSatisfy(context->cncEnvOutTag, tagGuid);");
 			stream_contextc.println("}");

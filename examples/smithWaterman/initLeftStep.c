@@ -10,7 +10,7 @@ void initLeftStep(int th, int nth, Context *context) {
             // TODO - Why isn't this just 0?
             left[ii] = GAP_PENALTY*(i*th+ii);
         }
-        Put(left_handle, CREATE_TAG(i, 0), context->left);
+        cncPut_left(left_handle, i, 0, context);
     }
 }
 

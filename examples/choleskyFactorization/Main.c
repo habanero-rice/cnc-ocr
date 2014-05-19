@@ -40,36 +40,33 @@ void cncEnvIn(int argc, char **argv, Context *context) {
                 }
             }
             // Put the initialized tile
-            char *tempTag = CREATE_TAG(i, j, 0);
-            Put(tile_handle, tempTag, context->Lkji);
+            cncPut_Lkji(tile_handle, i, j, 0, context);
         }
     }
     // Clean up source matrix (no longer needed)
     FREE(A1D);
     
     // Put matrix and tile dimension info
-    char *tag = CREATE_TAG(0);
     int *ntPtr, *tPtr;
     cncHandle_t nt_handle = cncCreateItem_tileSize(&ntPtr);
     *ntPtr = nt;
-    Put(nt_handle, tag, context->numTiles);
+    cncPut_numTiles(nt_handle, 0, context);
     cncHandle_t t_handle = cncCreateItem_numTiles(&tPtr);
     *tPtr = t;
-    Put(t_handle, tag, context->tileSize);
+    cncPut_tileSize(t_handle, 0, context);
 
     // Record the starting time of the computation
     struct timeval *startTime;
     cncHandle_t time_handle = cncCreateItem_startTime(&startTime, 1);
     gettimeofday(startTime, 0);
-    Put(time_handle, tag, context->startTime);
+    cncPut_startTime(time_handle, 0, context);
 
     // Start the computation
-    CNC_PRESCRIBE(kComputeStep, tag, context);
+    cncPrescribe_kComputeStep(0, context);
 
     // Set tag for the output step
     int totalTileCount = nt * (nt + 1) / 2;
-    char *envOutTag = CREATE_TAG(totalTileCount);
-    setEnvOutTag(envOutTag, context);
+    cncPrescribe_cncEnvOut(totalTileCount, context);
 }
 
 void cncEnvOut(int tileCount, startTimeItem startTime, numTilesItem numTiles, tileSizeItem tileSize,

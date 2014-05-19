@@ -10,7 +10,7 @@ void initAboveStep(int tw, int ntw, Context *context){
             // TODO - Why isn't this just 0?
             above[jj] = GAP_PENALTY*(j*tw+jj);
         }
-        Put(above_handle, CREATE_TAG(0, j), context->above);
+        cncPut_above(above_handle, 0, j, context);
     }
 }
 

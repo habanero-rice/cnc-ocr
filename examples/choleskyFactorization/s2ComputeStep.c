@@ -20,10 +20,9 @@ void s2ComputeStep(int k, int j, tileSizeItem tileSize, LkjiItem LkjiA1D, LkjiIt
                 LkjiA[ iB ][ jB ] -= LkjiB[ jB ][ kB ] * loBlock[ iB ][ kB ];
     }
 
-    char *tagLkji = CREATE_TAG(j, k, k+1);
-    Put(loBlock_handle, tagLkji, context->Lkji);
+    cncPut_Lkji(loBlock_handle, j, k, k+1, context);
 
-    char *tagResult = CREATE_TAG((j)*(j+1)/2 + k);
-    Put(loBlock_handle, tagResult, context->results);
+    int tagResult = (j)*(j+1)/2 + k;
+    cncPut_results(loBlock_handle, tagResult, context);
 }
 

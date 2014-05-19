@@ -87,26 +87,26 @@ void cncEnvIn(int argc, char **argv, Context *context) {
     data->ntw = ntw;
     data->nth = nth;
     memcpy(data->score_matrix, ALIGNMENT_SCORES, sizeof(ALIGNMENT_SCORES));
-    Put(dataHandle, CREATE_TAG(0), context->data);
+    cncPut_data(dataHandle, 0, context);
 
     // Record starting time
     struct timeval *startTime;
     cncHandle_t startTime_handle = cncCreateItem_startTime(&startTime, 1);
     gettimeofday(startTime, 0);
-    Put(startTime_handle, CREATE_TAG(0), context->startTime);
+    cncPut_startTime(startTime_handle, 0, context);
 
     // Seed edges
-    CNC_PRESCRIBE(initAboveStep, CREATE_TAG(tw, ntw), context);
-    CNC_PRESCRIBE(initLeftStep,  CREATE_TAG(th, nth), context);
+    cncPrescribe_initAboveStep(tw, ntw, context);
+    cncPrescribe_initLeftStep(th, nth, context);
 
     int i, j;
     for(i = 0; i < nth; i++){
         for(j = 0; j < ntw; j++){
-            CNC_PRESCRIBE(swStep, CREATE_TAG(i, j), context);
+            cncPrescribe_swStep(i, j, context);
         }
     }
 
-    setEnvOutTag(CREATE_TAG(ntw, nth, tw), context);
+    cncPrescribe_cncEnvOut(ntw, nth, tw, context);
 }
 
 void cncEnvOut(int ntw, int nth, int tw, startTimeItem startTime, aboveItem above, Context *context) {
