@@ -16,59 +16,38 @@
 #include <ocr.h>
 
 #define TABLE_SIZE 512 /* TODO: Table size should be set by the user when initializing the item collection */
-#define _ROLLBACK_AND_REPLAY 0
-#define _DATA_DRIVEN 1
 
-#ifdef _DATA_DRIVEN
-#define _CNC_POLICY _DATA_DRIVEN
-#else
-#define _CNC_POLICY _ROLLBACK_AND_REPLAY
-#endif
-
-#define LIST_REMOVED 1
 #include "cnc.h"
-#include <stdarg.h>
 
 typedef ocrGuid_t cncHandle_t;
 
 typedef struct ItemCollectionEntry ItemCollectionEntry;
+typedef s32 CncTagComponent;
 
 /* The structure to hold an item in the item collection */
 struct ItemCollectionEntry {
-  char * tag; /* Tags are NULL-terminated char arrays for now */
   ocrGuid_t event; /* The event representing the data item. Data will be put through the event when it is satisfied */
   ItemCollectionEntry * volatile nxt; /* The next bucket in the hashtable */
   char creator; /* Who created this entry (could be from a Put or a Get)*/
+  char tag[]; /* Tags are byte arrays, with a known length for each item collection */
 };
 
 #define DEPS_BUCKET 3 /* must be >=3 */
 
-int Put(cncHandle_t item, char * tag, ItemCollectionEntry ** hashmap);
+#define CNC_SUCCESS 0
+#define CNC_ABORT 1
 
-int PutIfAbsent(cncHandle_t item, char * tag, ItemCollectionEntry ** hashmap);
-void  __registerConsumer(char * tag, ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot);
+#define CNC_GET_ENTRY 1
+#define CNC_PUT_ENTRY 2
 
-char* createTag(int no_args, ...);
+#define PUT_FAIL 1
+#define PUT_SUCCESS 0
 
-/* warning for variadic macro support */
-#if __GNUC__ < 3 && !defined(__clang__) && __STDC_VERSION__ < 199901L && !defined(NO_VARIADIC_MACROS)
-#warning Your compiler might not support variadic macros, in which case the CREATE_TAG macro is not supported. You can instead use the createTag function with an explicit arg count. You can disable this warning by setting NO_VARIADIC_MACROS to 0, or disable the macro definitions by setting it to 1.
-#endif
+#define SINGLE_ASSIGNMENT_ENFORCED 1
+#define SKIP_SINGLE_ASSIGNMENT 0
 
-#if !NO_VARIADIC_MACROS
-#define TAG_LENGTH(...) (sizeof((u64[]){__VA_ARGS__})/sizeof(u64))
-#define CREATE_TAG(...) createTag(TAG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); exit(1); } } while (0)
-#endif
-
-int getTag(char* tag, int pos);
-
-cncHandle_t cncGet(char* tag, ItemCollectionEntry ** hashmap);
-
-#define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle); // release full batch's memory
-#define CNC_CREATE_ITEM(handle, ptr, size) DBCREATE(handle, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
-#define CNC_PRESCRIBE(stepName, tag, context) (context->stepName.depf(tag, context))
-#define CNC_NULL_HANDLE NULL_GUID
+int __cncPut(cncHandle_t item, char *tag, int tagLength, ItemCollectionEntry ** hashmap, bool isSingleAssignment);
+void  __cncRegisterConsumer(char *tag, int tagLength, ItemCollectionEntry * volatile * hashmap, ocrGuid_t stepToRegister, u32 slot);
 
 #endif /* _DATA_DRIVEN_H */
 

@@ -12,25 +12,18 @@ void cncEnvIn(int argc, char **argv, Context *context) {
     for(i = 0; i < 100; i++){
         cncHandle_t CollA_handle = cncCreateItem_CollA(&CollA[i], 1);
         *CollA[i] = i;
-        char *tagCollA = CREATE_TAG(i);
-        Put(CollA_handle, tagCollA, context->CollA);
+        cncPut_CollA(CollA_handle, i, context);
     }
 
     for(i = 0; i < 100; i++){
         cncHandle_t CollB_handle = cncCreateItem_CollB(&CollB[i]);
         *CollB[i] = i;
-        char *tagCollB = CREATE_TAG(i);
-        Put(CollB_handle, tagCollB, context->CollB);
+        cncPut_CollB(CollB_handle, i, context);
     }
 
-    char *tagSATag2 = CREATE_TAG(x, y);
-    CNC_PRESCRIBE(StepA, tagSATag2, context);
-
-    char *tagSBTag3 = CREATE_TAG(x, y);
-    CNC_PRESCRIBE(StepB, tagSBTag3, context);
-
-    char *tagOut = CREATE_TAG(x, y);
-    setEnvOutTag(tagOut, context);
+    cncPrescribe_StepA(x, y, context);
+    cncPrescribe_StepB(x, y, context);
+    cncPrescribe_cncEnvOut(x, y, context);
 }
 
 void cncEnvOut(int x, int y, TotalAItem TotalA, TotalBItem TotalB, Context* context) {

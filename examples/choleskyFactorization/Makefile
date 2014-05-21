@@ -8,6 +8,9 @@ OBJS=$(patsubst %.c,%.o,$(SRCS))
 # include header globally for user-defined types
 CFLAGS+=-include user_types.h
 
+# shut down CnC runtime even if some steps never finish
+#CFLAGS+=-DCNC_UNCLEAN_FINISH
+
 compile: $(TARGET)
 
 # building source files

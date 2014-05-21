@@ -21,6 +21,5 @@ void s3ComputeStep(int k, int j, int i, tileSizeItem tileSize,
         }
     }
 
-    char *tagLkji = CREATE_TAG(j, i, k+1);
-    Put(LkjiA1D.handle, tagLkji, context->Lkji);
+    cncPut_Lkji(LkjiA1D.handle, j, i, k+1, context);
 }

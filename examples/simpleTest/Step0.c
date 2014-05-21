@@ -6,9 +6,7 @@ void Step0(int k, sizeItem size0, Context *context) {
 
 	int i;
 	for (i = 0; i < size0.item; i++) {
-		char *tagS1Tag1 = CREATE_TAG(i);
-		CNC_PRESCRIBE(Step1, tagS1Tag1, context);
+		cncPrescribe_Step1(i, context);
 	}
 }
-
 

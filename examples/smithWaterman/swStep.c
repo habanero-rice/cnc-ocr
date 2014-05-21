@@ -44,7 +44,7 @@ void swStep(int i, int j, dataItem data, aboveItem above, leftItem left, Context
     for (index = 0; index <= data.item->tw; index++) {
         below[index] = curr_tile[data.item->th][index];
     }
-    Put(below_handle, CREATE_TAG(i+1, j), context->above);
+    cncPut_above(below_handle, i+1, j, context);
     ASSERT(left.item[data.item->th] == below[0]);
 
     int *right;
@@ -52,7 +52,7 @@ void swStep(int i, int j, dataItem data, aboveItem above, leftItem left, Context
     for (index = 0; index <= data.item->th; index++) {
         right[index] = curr_tile[index][data.item->tw];
     }
-    Put(right_handle, CREATE_TAG(i, j+1), context->left);
+    cncPut_left(right_handle, i, j+1, context);
     ASSERT(above.item[data.item->tw] == right[0]);
 
     /* Cleanup */

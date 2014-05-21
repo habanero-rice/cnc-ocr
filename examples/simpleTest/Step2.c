@@ -7,11 +7,9 @@ void Step2(int k, BiItem Bi, Context *context) {
 	int *Ci;
 	cncHandle_t Ci_handle = cncCreateItem_Ci(&Ci, 1);
 	*Ci = *Bi.item * 2;
+	cncPut_Ci(Ci_handle, k, context);
 
-	char *tagCi = CREATE_TAG(k);
-	Put(Ci_handle, tagCi, context->Ci);
-
-	PRINTF("Step2 done putting item %d with tag %s\n", *Ci, tagCi);
+	PRINTF("Step2 done putting item %d with tag %d\n", *Ci, k);
 }
 
 
