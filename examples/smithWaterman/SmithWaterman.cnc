@@ -24,9 +24,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Input output relationships
 
-( initAboveStep: tw, ntw ) -> [ above: 0, {0..nth} ];
+( initAboveStep: tw, ntw ) -> [ above: 0, {0..ntw} ];
 
-( initLeftStep:  th, nth ) -> [ left:  {0..ntw}, 0 ];
+( initLeftStep:  th, nth ) -> [ left:  {0..nth}, 0 ];
 
 [ data: 0 ],
 [ above: i, j ], [ left: i, j ]
