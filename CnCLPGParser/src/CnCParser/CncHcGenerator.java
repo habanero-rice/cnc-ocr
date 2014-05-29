@@ -875,9 +875,8 @@ public class CncHcGenerator extends AbstractVisitor
 					stream_mainhc.println("\t/* Suggested code for writting items from environment:");
 					stream_mainhc.println("\tvoid *val;\n");
 					stream_mainhc.printf ("\tcncHandle_t valHandle = cncItemCreate_%s(&val);%n%n", e_out);
-					stream_mainhc.println("\tchar *in_tag = createTag(3, i, j, k);\n");
-					stream_mainhc.println("\tPut(valHandle, in_tag, context->"+e_out+");");
-					stream_mainhc.println("\tCNC_PRESCRIBE(stepName, in_tag, context);\n\t*/");
+					stream_mainhc.printf("\tcncPut_%s(valHandle, i, j, k, context);%n", e_out);
+					stream_mainhc.println("\tcncPrescribe_stepName(i, j, k, context);\n\t*/");
 				}
 
 
@@ -960,41 +959,10 @@ public class CncHcGenerator extends AbstractVisitor
 		
 				if(gen){
 					buffer_step.append("void " + step_name + "( " + function_definition + "){\n");	
-					if(!all_tag_functions_present){
-						//generated suggested user code based on the cnc graph file
-						if(sil.outputs.size()>0){
-							buffer_step.append("\t/* Put output values into one or more of these output item collections: "+sil.outputs.keySet().toString()+"\n");
-							buffer_step.append("\t   Function prototype: Put(item_to_put, item_tag, item_collection);\n");
-							buffer_step.append("\t   Sample:\n");
-							buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
-							buffer_step.append("\t   double **data_to_put;\n");
-							buffer_step.append("\t   // fill in data_to_put;\n");
-							buffer_step.append("\t   char *newTag = createTag(3, i, j, k);\n");
-							buffer_step.append("\t   Put(data_to_put, newTag, context->" + sil.outputs.keySet().iterator().next() + ");\n");
-							buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
-							buffer_step.append("\t*/\n\n");
-						}
-						if(sil.tags.size()>0){
-							HashSet<String>  local_steps_prescribed = new HashSet<String>();
-							for(String tag_step_name : sil.tags.keySet()){
-								local_steps_prescribed.addAll(tag_steps.get(tag_step_name)) ;
-							}
-							if(local_steps_prescribed.size()>0){
-								buffer_step.append("\t/* This step was defined to put the following tags: "+sil.tags.keySet().toString()+"\n");
-								buffer_step.append("\t   So this step should prescribe one or more of the following steps: "+local_steps_prescribed.toString()+"\n");
-								buffer_step.append("\t   Function prototype: CNC_PRESCRIBE(stepName, step_tag, context);\n");
-								buffer_step.append("\t   Sample:\n");
-								buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
-								buffer_step.append("\t   char *newTag = createTag(3, i, j, k);\n");
-								buffer_step.append("\t   CNC_PRESCRIBE("+local_steps_prescribed.iterator().next()+", newTag, context);\n");
-								buffer_step.append("\t   /////////////////////////////////////////////////////////////////////////////////////\n");
-								buffer_step.append("\t*/\n\n");
-							}
-						}
-					}
-					else{
+					if(all_tag_functions_present) {
 						global_index = GenerateOutputAndTagData(sil, buffer_step, global_index, "\t");
 					}
+					else throw new RuntimeException("All tag functions should be present.");
 					buffer_step.append("}\n\n");
 					stream_step.println(buffer_step.toString());
 					stream_step.close();
@@ -1508,8 +1476,10 @@ public class CncHcGenerator extends AbstractVisitor
 		                          tabs, output_name, index,
 								  output_name, output_name, index, for_index, itemCount,
 		                          tabs, output_name, index, for_index));
-		puts.append(tabs + "char *tag"+ output_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
-		puts.append(tabs + "Put(" + output_name + index + "_handle" + ", tag"+ output_name + index +", context->" +output_name + ");\n");
+		puts.append(String.format(
+				"%scncPut_%s(%s%d_handle, %s, context);%n",
+				tabs, output_name, output_name, index, ilist
+		));
 		puts.append(endforloops);
 		puts.append("\n");
 	}
@@ -1547,9 +1517,11 @@ public class CncHcGenerator extends AbstractVisitor
 			out.append(initial_indent + "int "+indexlist+";\n");
 
 		out.append(forloops);
-		out.append(tabs + "char *tag"+ input_name + index + " = createTag(" + ltfl.size() + ", " + ilist + ");\n");
 		for(String step_name : steps_prescribed){
-			out.append(tabs + "CNC_PRESCRIBE(" + step_name + ", tag"+ input_name + index +", context);\n");
+			out.append(String.format(
+					"%scncPrescribe_%s(%s, context);%n",
+					tabs, step_name, ilist 
+			));
 		}
 		out.append(endforloops);
 		out.append("\n");	
