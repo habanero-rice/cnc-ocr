@@ -1,0 +1,8 @@
+#!/bin/bash
+
+ROOT=${CNCOCR_INSTALL?"Missing CNCOCR_INSTALL environment variable"}
+
+[ -f $ROOT/.depsOK ] || bash $ROOT/lib/getdeps.sh
+
+PYTHONPATH="$ROOT:$ROOT/lib" python $ROOT/cncocr_translator.py "$@"
+
