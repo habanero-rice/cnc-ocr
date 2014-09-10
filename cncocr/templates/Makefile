@@ -1,5 +1,5 @@
 TARGET={{g.name}}.exec
-CFLAGS=-g -I. -Icncocr_support -I$(OCR_INSTALL)/include -Wall
+CFLAGS=-g -O2 -I. -Icncocr_support -I$(OCR_INSTALL)/include -Wall
 
 include cncocr_support/{{g.name}}_steplist.mk
 RUNTIME_SRCS=cncocr_support/cncocr.c

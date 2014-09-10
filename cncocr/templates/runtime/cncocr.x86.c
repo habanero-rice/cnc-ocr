@@ -1,7 +1,6 @@
 {% extends "runtime/cncocr.c" %}
 
 {% block arch_itemcoll_defs %}
-#include <stdlib.h>
 #include <string.h>
 
 #define DEPS_BUCKET 3 /* must be >=3 */

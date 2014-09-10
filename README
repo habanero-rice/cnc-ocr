@@ -1,0 +1,65 @@
+*
+* Installation Prerequisites
+*
+	- make
+	- Python (2.7)
+	- gcc
+	- OCR (0.9)
+
+*
+* Setting up the environment
+*
+   - Ensure OCR env is set:
+	export OCR_INSTALL=`your_ocr_checkout`/ocr-install
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OCR_INSTALL}/lib
+   - Set up CnC-OCR env:
+	export CNCOCR_INSTALL=`pwd`
+	export PATH=$PATH:${CNCOCR_INSTALL}/bin
+   
+
+*
+* Running the translator
+*
+	cncocr_t [options] FileName.cnc
+
+The first time you run the graph translator, it will download its dependencies (Jinja2 and Pyparsing), which will be saved in ${CNCOCR_INSTALL}/lib for future use.
+
+*
+* Docs
+*
+	Some additional documentation on the CnC model can be found in docCnCHC.pdf, a document created part of the CDSC project. 
+	In spite of the fact that the document was designed for CnC-HC rather than CnC-OCR, it is never the less informative about creating a .cnc file and changing it, concepts that still apply for CnC-OCR. The document can be found on our github page:
+	https://github.com/habanero-rice/cnc-ocr/blob/master/docCnCHC.pdf
+
+============================================================================
+*
+* Creating CnC-OCR applications
+*
+
+1) For any CnC-OCR application, the first step is to create the CnC graph file (name.cnc) which will define the steps, item collections and tag collections and the relations between them.
+2) The second step is invoking the translator:
+cncc_t graph_name.cnc
+   This will generate a bunch of files. The files generated in the current directory should be edited by the application author. The files in the cncocr_support directory interfaces the user code with the underlying OCR runtime and should rarely need any editing.
+3) The third step is editing the code in the current directory to implement the graph's init, finalize, and step functions. Additionally, you may need to edit the mainEdt (in Main.c) to parse command-line arguments and pass them to the CnC graph when launched.
+4) make; ./graph_name.exec args
+
+See the examples (in the examples directory) for further details.
+
+
+*
+* Help
+*
+You can submit bug reports and other issues on our github page:
+https://github.com/habanero-rice/cnc-ocr
+
+Please also check the github page for current contact information.
+
+
+*
+* Acknowledgements
+*
+Partial support for CnC-OCR was provided through the CDSC program of 
+the National Science Foundation with an award in the 2009 Expedition 
+in Computing Program.
+This work is actively supported as part ofthe DOE-funded Traleika Glacier
+X-Stack project (Intel CS1924113).

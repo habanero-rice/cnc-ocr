@@ -80,7 +80,6 @@ static ocrGuid_t _itemBlockCreate(u32 tagLength, ocrGuid_t next, ItemBlock **out
 static ocrGuid_t _itemBlockInsert(ItemBlock *block, u8 *tag, ocrGuid_t entry, u32 tagLength) {
     ASSERT(!CNC_ITEM_BLOCK_FULL(block));
     u32 i = block->count;
-    block->count += 1;
     if (entry == CNC_GETTER_GUID) {
         block->entries[i].isEvent = true;
         ocrEventCreate(&block->entries[i].guid, OCR_EVENT_IDEM_T, true);
@@ -90,6 +89,9 @@ static ocrGuid_t _itemBlockInsert(ItemBlock *block, u8 *tag, ocrGuid_t entry, u3
         block->entries[i].guid = entry;
     }
     MEMCPY(&block->tags[i*tagLength], tag, tagLength);
+    // XXX - do we need some sort of memory barrier here on FSim?
+    __sync_synchronize();
+    block->count += 1;
     return block->entries[i].guid;
 }
 

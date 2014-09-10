@@ -6,6 +6,9 @@
 #define {{defname}}
 
 #include <ocr.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 {% block arch_includes %}{% endblock arch_includes %}
 /********************************\
 ******** CNC TYPE ALIASES ********

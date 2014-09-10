@@ -1,0 +1,67 @@
+Smith-Waterman example for CnC-OCR
+==================================
+
+Follow the instructions in the CnC-OCR README for building and installing the
+CnC-OCR runtime and toolchain.
+
+This example includes the following files:
+
+    * SmithWaterman.cnc:
+        Specification for this application's CnC graph structure.
+
+    * Main.c:
+        Entry point for the application. Includes the code to read the input
+        files into a datablock, create a CnC graph, and launch the computation.
+
+    * SmithWaterman.c:
+        Contains the initialization and finalization functions for the CnC
+        graph. The init function does the initial puts and prescribes, and
+        also sets the parameters for the finalization function. The
+        finalization function reads the final item from the computation
+        and prints the sequence score.
+
+    * SmithWaterman_swStep.c
+        The step code for the dynamic programming computation, calculating the
+        maximal-score path through a single tile of the score matrix.
+
+    * SmithWaterman_initAboveStep.c, SmithWaterman_initLeftStep.c
+        The step codes for seeding the dynamic programming calculation with
+        initial values along the top and left rows of the score matrix.
+
+    * SmithWaterman_defs.h
+        A header included globally in the make process that provides the
+        definitions for all non-primitive types referenced in SmithWaterman.cnc.
+
+    * run_test.sh:
+        A shell script that runs the translator, makes the application
+        binary, runs the application and finally verifies the output.
+
+You must run the CnC-OCR graph translator tool to generate the scaffolding
+code, and compile the application using the provided Makefile. You can use
+the provided shell script to build and run the application:
+
+        ./run_test.sh
+
+The script runs the Smith-Waterman application twice. The first run uses very
+small input sequences, and the second run uses much larger input sequences. The
+script will verify that the correct score is calculated, printing OK if found.
+A successful run should yield output like the following (the times will vary):
+
+    Testing string1.txt vs string2.txt with width=3, height=3
+    Size of input sequence 1 has length 9
+    Size of input sequence 2 has length 9
+    Tile width:  3
+    Tile height: 3
+    Imported 3 x 3 tiles.
+    The computation took 0.000300 seconds
+    score: 10
+    OK
+    Testing SA.txt vs SB.txt with width=569, height=661
+    Size of input sequence 1 has length 100713
+    Size of input sequence 2 has length 101133
+    Tile width:  569
+    Tile height: 661
+    Imported 177 x 153 tiles.
+    The computation took 9.467730 seconds
+    score: 65386
+    OK
