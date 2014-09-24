@@ -38,11 +38,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     ocrEventSatisfy(ctx->_guids.finalizedEvent, NULL_GUID);
     {% endif %}
     // TODO - Clean up
-{% if logEnabled %}
-    fprintf(stderr, "<#CNC_LOG#> DONE {{stepfun.collName}} @ {{
-            (['%lu'] * stepfun.tag|count)|join(', ') }}\n", {{
-            stepfun.tag|join(', ') }});
-{% endif -%}
+    {{ util.log_msg("DONE", stepfun.collName, stepfun.tag) }}
     return NULL_GUID;
 }
 
@@ -83,11 +79,7 @@ cncGet_{{input.collName}}(
 {%- endcall %}
     {% endfor %}
     ASSERT(_depc == _edtSlot);
-{% if logEnabled %}
-    fprintf(stderr, "<#CNC_LOG#> PRESCRIBED {{stepfun.collName}} @ {{
-            (['%lu'] * stepfun.tag|count)|join(', ') }}\n", {{
-            stepfun.tag|join(', ') }});
-{% endif -%}
+    {{ util.log_msg("PRESCRIBED", stepfun.collName, stepfun.tag) }}
 }
 {% endfor %}
 

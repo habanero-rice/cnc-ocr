@@ -37,7 +37,7 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 #endif
 
 #if !NO_VARIADIC_MACROS
-#define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrAbort(1); } } while (0)
+#define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); } } while (0)
 #endif
 
 #define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle) /* free datablock backing an item */
@@ -51,11 +51,13 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 
 /* helpers for accessing packed argc/argv in ocrMain */
 #define OCR_MAIN_ARGC OCR_ARGC(depv[0])
-#define OCR_ARGC(dep) (((u64*)(dep).ptr)[0])
+#define OCR_ARGC(dep) getArgc(dep.ptr)
 #define OCR_MAIN_ARGV(i) OCR_ARGV(depv[0], i)
-#define OCR_ARGV(dep, i) (((char*)(dep).ptr)+((u64*)(dep).ptr)[(i)+1])
+#define OCR_ARGV(dep, i) getArgv(dep.ptr, i)
 
-#define CNC_SHUTDOWN_ON_FINISH(ctx) cncAutomaticShutdown((ctx)->_guids.doneEvent)
+// XXX - this should use doneEvent, but finishEDTs are broken right now
+// so I have to make due with finalizedEvent instead until they're fixed.
+#define CNC_SHUTDOWN_ON_FINISH(ctx) cncAutomaticShutdown((ctx)->_guids.finalizedEvent)
 
 /*****************************************\
 ********* CNC COMPATIBILITY MACROS ********

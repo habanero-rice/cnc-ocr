@@ -9,13 +9,22 @@
 
 
 {#/****** Indent calling block to the specified level ******/#}
+{% macro log_msg(msgType, collName, tag) -%}
+{% if logEnabled %}
+    fprintf(stderr, "<#CNC_LOG#> {{msgType}} {{collName}} @ {{
+            (['%lu'] * tag|count)|join(', ') if tag else 0 }}\n"{{
+            ([""]+tag)|join(', ') }});
+{% endif -%}
+{%- endmacro %}
+
+{#/****** Indent calling block to the specified level ******/#}
 {% macro render_indented(level) -%}
 {{ caller()|indent(width=4*level) }}
 {%- endmacro %}
 
 {#/****** Print all the components of a key or tag ******/#}
-{% macro print_tag(tag, typed=False) -%}
-{% for x in tag %}{% if typed %}cncTag_t {% endif %}{{x}}, {% endfor -%}
+{% macro print_tag(tag, typed=False, prefix="") -%}
+{% for x in tag %}{% if typed %}cncTag_t {% endif %}{{prefix ~ x}}, {% endfor -%}
 {%- endmacro %}
 
 {#/****** Print bindings for a list of items ******/#}

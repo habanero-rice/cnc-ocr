@@ -53,8 +53,8 @@ cVar = Word("_"+alphas, "_"+alphanums)
 
 # C-style expressions
 cExpr = Forward() # forward-declaration
-cSubExpr = "(" + cExpr + ")" | "[" + cExpr + "]"
-cExpr <<= ZeroOrMore(CharsNotIn("()[]") | cSubExpr) # concrete definition
+cSubExpr = "(" + cExpr + ")" | "[" + cExpr + "]" | "{" + cExpr + "}"
+cExpr <<= ZeroOrMore(CharsNotIn("()[]{}") | cSubExpr) # concrete definition
 cExpr.leaveWhitespace()
 
 # Unit expression (zero-tuple, kind of like "void")
@@ -73,6 +73,13 @@ cTypeBase = joined(OneOrMore(cTypeComponent), " ")
 cTypeStars = joined(ZeroOrMore(cStar))
 
 cType = cTypeBase('baseType') + cTypeStars('stars')
+
+
+##################################################
+# Context struct fields declaration
+# (used to add custom parameters to the context)
+
+cncContext = CaselessLiteral("$context").suppress() + "{" + cExpr('fields') + "}" + ";"
 
 
 ##################################################
@@ -101,7 +108,8 @@ rangedTC = Group(kind('RANGED') + "{" + rangeSafeExpr('start') \
 # (keys for items and tags for steps)
 
 tagDecl = rep1sep(cVar) | unitExpr
-tagExpr = unitExpr | rep1sep(scalarTC | rangedTC)
+tagExpr = unitExpr | rep1sep(rangedTC | scalarTC)
+scalarTagExpr = rep1sep(scalarExpr)
 
 
 ##################################################
@@ -116,8 +124,17 @@ itemRef = Group("[" + kind('ITEM') + Optional(cVar('binding') + "@") \
 # ITEM COLLECTION DECLARATION
 # (specifies the data type,  and key shape)
 
+# mappings from virtual to concrete item collections can be
+# specified by a function name, or inline as a tag expression
+externalMapping = CaselessLiteral("using") + cVar('funcName')
+inlineMapping = ":" + scalarTagExpr('keyFunc')
+mappingFunction = externalMapping | inlineMapping
+itemMapping = cVar('targetCollName') + mappingFunction
+
 cTypedVar = cType('type') + cVar('collName')
-itemDecl = Group("[" + cTypedVar + ":" + tagDecl('key') + "]" + ";")
+itemDecl = Group("[" + cTypedVar + ":" + tagDecl('key') \
+                + Optional("=" + itemMapping)('virtualMapping') \
+                + "]" + ";")
 
 
 ##################################################
@@ -148,8 +165,9 @@ stepRelation = Group(stepDecl('step') \
 # CNC GRAPH SPEC
 # (parses an entire spec file)
 
+graphCtx = Optional(joined(cncContext))
 itemColls = ZeroOrMore(itemDecl)
 stepColls = OneOrMore(stepRelation)
-cncGraphSpec = itemColls('itemColls') + stepColls('stepRels')
+cncGraphSpec = graphCtx('ctx') + itemColls('itemColls') + stepColls('stepRels')
 cncGraphSpec.ignore(cppStyleComment)
 

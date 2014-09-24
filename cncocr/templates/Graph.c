@@ -60,3 +60,18 @@ void {{stepfun.collName}}({{ util.print_tag(stepfun.tag, typed=True)
 {% endif -%}
 {% endfor %}
 }
+{% if g.externVms %}
+
+{% for i in g.externVms -%}
+/* Mapping {{i.collName}} onto {{i.mapTarget}} */
+{{i.mapTarget}}ItemKey {{i.functionName}}({{
+  util.print_tag(i.key, typed=True)
+  }}{{g.name}}Ctx *ctx) {
+    {{i.mapTarget}}ItemKey _result;
+    {% for x in g.itemDeclarations[i.mapTarget].key -%}
+    _result.{{x}} = /*TODO*/0;
+    {% endfor -%}
+    return _result;
+}
+{% endfor %}
+{% endif %}

@@ -1,6 +1,7 @@
 from itertools import count, ifilter, imap
 from collections import Counter, OrderedDict
 from sys import exit
+from string import strip
 
 
 class CType(object):
@@ -64,6 +65,38 @@ class ItemDecl(object):
         self.type = CType(itemDecl.type)
         self.key = tuple(itemDecl.key)
         self.isSingleton = len(self.key) == 0
+        self.isVirtual = False
+
+
+class ItemMapping(ItemDecl):
+    def __init__(self, itemDecl):
+        super(ItemMapping, self).__init__(itemDecl)
+        self.mapTarget = itemDecl.targetCollName
+        self.isVirtual = True
+
+
+class ItemInlineMapping(ItemMapping):
+    def __init__(self, itemDecl):
+        super(ItemInlineMapping, self).__init__(itemDecl)
+        self.keyFunction = tuple(x.strip() for x in itemDecl.keyFunc)
+        self.isInline = True
+
+
+class ItemExternMapping(ItemMapping):
+    def __init__(self, itemDecl):
+        super(ItemExternMapping, self).__init__(itemDecl)
+        self.functionName = itemDecl.funcName
+        self.isInline = False
+
+
+def makeItemDecl(itemDecl):
+    vm = itemDecl.virtualMapping
+    if not vm:
+        return ItemDecl(itemDecl)
+    elif vm.keyFunc:
+        return ItemInlineMapping(itemDecl)
+    else:
+        return ItemExternMapping(itemDecl)
 
 
 class StepFunction(object):
@@ -131,7 +164,14 @@ class CnCGraph(object):
         steps = [ x.step for x in g.stepRels ]
         verifyCollectionDecls("step", steps)
         self.name = name
-        self.itemDeclarations = OrderedDict((i.collName, ItemDecl(i)) for i in g.itemColls)
+        # items
+        self.itemDeclarations = OrderedDict((i.collName, makeItemDecl(i)) for i in g.itemColls)
+        self.concreteItems = [ i for i in self.itemDeclarations.values() if not i.isVirtual ]
+        # item virtual mappings
+        self.vms = [ i for i in self.itemDeclarations.values() if i.isVirtual ]
+        self.inlineVms = [ i for i in self.vms if i.isInline ]
+        self.externVms = [ i for i in self.vms if not i.isInline ]
+        # steps / pseudo-steps
         self.stepFunctions = OrderedDict((x.step.collName, StepFunction(x)) for x in g.stepRels)
         verifyEnv(self.stepFunctions)
         self.initFunction = self.stepFunctions.pop(initNameRaw)
@@ -139,4 +179,6 @@ class CnCGraph(object):
         self.finalizeFunction = self.stepFunctions.pop(finalizeNameRaw)
         self.finalizeFunction.collName = str(name)+"_finalize"
         self.finalAndSteps = [self.finalizeFunction] + self.stepFunctions.values()
+        # context
+        self.ctxParams = filter(bool, map(strip, g.ctx.splitlines())) if g.ctx else []
 

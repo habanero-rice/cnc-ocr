@@ -19,16 +19,16 @@
 {% block arch_itemcoll_init scoped -%}
 s32 i;
 ocrGuid_t *itemTable;
-{% for name, i in g.itemDeclarations.items() -%}
+{% for i in g.concreteItems -%}
 {% if i.key -%}
-CNC_CREATE_ITEM(&context->_items.{{name}}, (void**)&itemTable, sizeof(ocrGuid_t) * (CNC_TABLE_SIZE+1));
+CNC_CREATE_ITEM(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * (CNC_TABLE_SIZE+1));
 for (i=0; i<=CNC_TABLE_SIZE; i++) itemTable[i] = NULL_GUID;
 {% else -%}
-ocrEventCreate(&context->_items.{{name}}, OCR_EVENT_STICKY_T, true);
+ocrEventCreate(&context->_items.{{i.collName}}, OCR_EVENT_IDEM_T, true);
 {% endif -%}
 {% endfor -%}
 {% endblock arch_itemcoll_init -%}
-    {% endcall -%}
+    {% endcall %}
     // initialize step collections
     {% for s in g.finalAndSteps -%}
     ocrEdtTemplateCreate(&context->_steps.{{s.collName}},
@@ -42,11 +42,11 @@ void {{g.name}}_destroy({{g.name}}Ctx *context) {
     // XXX - need to do a deep free by traversing the table
     {% call util.render_indented(1) -%}
 {% block arch_itemcoll_destroy -%}
-{% for name, i in g.itemDeclarations.items() -%}
+{% for i in g.concereteItems -%}
 {% if i.key -%}
-CNC_DESTROY_ITEM(context->_items.{{name}});
+CNC_DESTROY_ITEM(context->_items.{{i.collName}});
 {% else -%}
-ocrEventDestroy(context->_items.{{name}});
+ocrEventDestroy(context->_items.{{i.collName}});
 {% endif -%}
 {% endfor -%}
 {% endblock arch_itemcoll_destroy -%}
