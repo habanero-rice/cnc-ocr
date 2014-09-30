@@ -1,13 +1,23 @@
 #include "cncocr_internal.h"
-
+{#
 // TODO:
 // Instead of having a isSingleAssignment argument for each of the
 // item put functions, we should have some sort of tuning parameter
 // that lets us choose to use STICKY or IDEM events in the collection?
 // Then satisfying the event would give the desired behavior.
 // (We'd also have to check if it's an event or a data block guid.)
-
+#}
 {% block arch_itemcoll_defs %}
+// XXX - depending on misc.h for HAL on FSim
+#define USE_OCR_HAL 1
+#if !USE_OCR_HAL
+static void _cncMemCopy(void *dest, const void *src, size_t n) {
+    u8 *x = (u8*)dest;
+    const u8 *y = (const u8*)src;
+    size_t i;
+    for (i=0; i<n; i++) x[i] = y[i];
+}
+#endif // USE_OCR_HAL
 
 // XXX - increase this (I just wanted to set it small so I can see if it's working)
 #define CNC_ITEMS_PER_BLOCK 8
@@ -31,33 +41,12 @@ typedef struct {
     u8 tag[];
 } ItemCollOpParams;
 
-// XXX - emulating exclusive write mode using this lock
-static void _lock(volatile u32 *lock) {
-    while (__sync_lock_test_and_set(lock, 1)) {
-        while (*lock);
-    }
-}
-
-static void _unlock(volatile u32 *lock) {
-    __sync_synchronize();
-    *lock = 0;
-}
-
-static void _lockArray(ocrGuid_t *blockArray) {
-    _lock((volatile u32*)&blockArray[CNC_TABLE_SIZE]);
-}
-
-static void _unlockArray(ocrGuid_t *blockArray) {
-    _unlock((volatile u32*)&blockArray[CNC_TABLE_SIZE]);
-}
-
 typedef struct {
     bool isEvent;
     ocrGuid_t guid;
 } ItemBlockEntry;
 
 typedef struct {
-    volatile u32 lock;
     u32 count;
     ocrGuid_t next;
     ItemBlockEntry entries[CNC_ITEMS_PER_BLOCK];
@@ -70,7 +59,6 @@ static ocrGuid_t _itemBlockCreate(u32 tagLength, ocrGuid_t next, ItemBlock **out
     u64 size = sizeof(ItemBlock) + (tagLength * CNC_ITEMS_PER_BLOCK);
     CNC_CREATE_ITEM(&blockGuid, (void**)&block, size);
     // XXX - should we start from the back?
-    block->lock = 0;
     block->count = 0;
     block->next = next;
     *out = block;
@@ -88,17 +76,33 @@ static ocrGuid_t _itemBlockInsert(ItemBlock *block, u8 *tag, ocrGuid_t entry, u3
         block->entries[i].isEvent = false;
         block->entries[i].guid = entry;
     }
-    MEMCPY(&block->tags[i*tagLength], tag, tagLength);
+#if USE_OCR_HAL
+    hal_memCopy(&block->tags[i*tagLength], tag, tagLength, 0);
+    hal_fence();
+#else
+    _cncMemCopy(&block->tags[i*tagLength], tag, tagLength);
     // XXX - do we need some sort of memory barrier here on FSim?
-    __sync_synchronize();
+#endif // USE_OCR_HAL
     block->count += 1;
     return block->entries[i].guid;
 }
 
+static bool _cncMemCompare(const void *a, const void *b, size_t n) {
+    const u8 *x = (const u8*)a;
+    const u8 *y = (const u8*)b;
+    size_t i;
+    for (i=0; i<n; i++) {
+        if (x[i] != y[i]) return 1;
+    }
+    return 0;
+}
+
+#define CNC_MEMCMP _cncMemCompare
 {% endblock arch_itemcoll_defs %}
+
 /* Compare byte-by-byte for tag equality */
 static bool _equals(u8 *tag1, u8 *tag2, u32 length) {
-    return MEMCMP(tag1, tag2, length) == 0;
+    return CNC_MEMCMP(tag1, tag2, length) == 0;
 }
 
 /* Hash function implementation. Fast and pretty good */
@@ -129,8 +133,6 @@ static ocrGuid_t _addToBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
     ocrGuid_t *blockArray = depv[0].ptr;
     ItemCollOpParams *params = depv[1].ptr;
     ocrGuid_t paramsGuid = depv[1].guid;
-    // XXX - we don't REALLY get exclusive write, so we have to do a lock
-    _lockArray(blockArray);
     // look up the first block the bucket
     ocrGuid_t firstBlock = blockArray[params->bucketIndex];
     // is our first block still first?
@@ -144,6 +146,8 @@ static ocrGuid_t _addToBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
         if (isGetter) {
             ocrAddDependence(res, params->entry, params->slot, params->mode);
         }
+        // DONE! clean up.
+        CNC_DESTROY_ITEM(paramsGuid);
     }
     else { // someone added a new block...
         // try searching again
@@ -160,8 +164,6 @@ static ocrGuid_t _addToBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
             /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
         ocrEdtTemplateDestroy(templGuid);
     }
-    // XXX - we don't REALLY get exclusive write, so we have to do an unlock
-    _unlockArray(blockArray);
     return NULL_GUID;
 }
 
@@ -170,8 +172,6 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
     ItemBlock *block = depv[0].ptr;
     ItemCollOpParams *params = depv[1].ptr;
     ocrGuid_t paramsGuid = depv[1].guid;
-    // XXX - we don't REALLY get exclusive write, so we have to do a lock
-    _lock(&block->lock);
     // is it in this block?
     // XXX - repeated code (also in the searchEdt)
     u32 i = _itemBlockFind(block, params->tag, params->tagLength, 0);
@@ -184,6 +184,8 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
             ocrAddDependence(params->entry, foundEntry, 0, DB_DEFAULT_MODE);
         }
         // XXX - currently ignoring single assignment checks
+        // DONE! clean up.
+        CNC_DESTROY_ITEM(paramsGuid);
     }
     // add the entry if there's still room
     else if (!CNC_ITEM_BLOCK_FULL(block)) {
@@ -193,6 +195,8 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
         if (isGetter) {
             ocrAddDependence(res, params->entry, params->slot, params->mode);
         }
+        // DONE! clean up.
+        CNC_DESTROY_ITEM(paramsGuid);
     }
     else { // the block filled up while we were searching
         // might need to add a new block to the bucket
@@ -207,8 +211,6 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
         ocrAddDependence(paramsGuid, addEdtGuid, 1, DB_DEFAULT_MODE);
         ocrEdtTemplateDestroy(templGuid);
     }
-    // XXX - we don't REALLY get exclusive write, so we have to do an unlock
-    _unlock(&block->lock);
     return NULL_GUID;
 }
 
@@ -234,6 +236,8 @@ static ocrGuid_t _searchBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_
             ocrAddDependence(params->entry, foundEntry, 0, DB_DEFAULT_MODE);
         }
         // XXX - currently ignoring single assignment checks
+        // DONE! clean up.
+        CNC_DESTROY_ITEM(paramsGuid);
     }
     // did we reach the end of the search?
     else if (block->next == NULL_GUID || blockGuid == params->oldFirstBlock) {
@@ -316,7 +320,11 @@ static void _itemCollUpdate(ocrGuid_t coll, u8 *tag, u32 tagLength, u8 role, ocr
     params->role = role;
     params->slot = slot;
     params->mode = mode;
-    MEMCPY(params->tag, tag, tagLength);
+#if USE_OCR_HAL
+    hal_memCopy(params->tag, tag, tagLength, 0);
+#else
+    _cncMemCopy(params->tag, tag, tagLength);
+#endif // USE_OCR_HAL
     // edt
     ocrGuid_t deps[] = { coll, paramsGuid };
     ocrGuid_t shutdownEdtGuid, templGuid;
@@ -366,3 +374,67 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent) {
         /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
     ocrEdtTemplateDestroy(templGuid);
 }
+
+ocrEdtDep_t _cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize) {
+    u32 i, j, k;
+    ///////////////////////////////////////
+    // Figure out how much memory we need
+    ///////////////////////////////////////
+    u32 sum = 0, product = 1;
+    for (i=0; i<n-1; i++) {
+        product *= dims[i];
+        sum += sizeof(void*) * product;
+    }
+    product *= dims[i];
+    sum += itemSize * product;
+    ///////////////////////////////////////
+    // Allocate a datablock
+    ///////////////////////////////////////
+    ocrEdtDep_t block;
+    CNC_CREATE_ITEM(&block.guid, &block.ptr, sum);
+    ///////////////////////////////////////
+    // Set up the internal pointers
+    ///////////////////////////////////////
+    if (n > 1) {
+        u32 prevDim = 1, currDim = 1, nextDim = dims[0];
+        void **ptrs = block.ptr;
+        void **current = ptrs;
+        void **tail = ptrs + nextDim; // make room for first array
+        for (i=1; i<n-1; i++) {
+            // Slide the window
+            prevDim = currDim;
+            currDim = nextDim;
+            nextDim = dims[i];
+            // One array for each parent
+            for (j=0; j<prevDim; j++) {
+                // Initialize each current pointer
+                for (k=0; k<currDim; k++) {
+                    *current = (void*)tail;
+                    tail += nextDim; // Make room for new array
+                    ++current;
+                }
+            }
+        }
+        u8 **itemCurrent = (u8**)current;
+        u8 *itemTail = (u8*)tail;
+        // Slide the window
+        prevDim = currDim;
+        currDim = nextDim;
+        nextDim = dims[i];
+        // One array for each last-level parent
+        for (j=0; j<prevDim; j++) {
+            // Initialize each current pointer
+            for (k=0; k<currDim; k++) {
+                *itemCurrent = itemTail;
+                itemTail += itemSize * nextDim; // Make room for new items
+                ++itemCurrent;
+            }
+        }
+        ASSERT(itemTail == ((u8*)ptrs + sum));
+    }
+    ///////////////////////////////////////
+    // Return the initialized datablock
+    ///////////////////////////////////////
+    return block;
+}
+

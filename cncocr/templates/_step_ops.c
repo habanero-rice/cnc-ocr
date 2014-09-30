@@ -20,24 +20,46 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     const cncTag_t {{x}} = (cncTag_t)paramv[{{loop.index0}}]; MAYBE_UNUSED({{x}});
     {% endfor %}
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
-
     {#-/****** Set up input items *****/#}
     {% for input in stepfun.inputs %}
-{%- set comment = "Get \"" ~ input.binding ~ "\" inputs" -%}
-{%- call util.render_indented(1) -%}
-{%- call(var) util.render_tag_nest(comment, input, malloc=True) -%}
-{{var}}.item = {{unpack_item(input)}}depv[_edtSlot].ptr;
-{{var}}.handle = depv[_edtSlot++].guid;
-{%- endcall -%}
-{%- endcall %}
+    {{ util.ranged_type(input) ~ input.binding }};
+    {% if input.keyRanges -%}
+    {#/*RANGED*/-#}
+    ocrEdtDep_t _block_{{input.binding}};
+    { // Init ranges for "{{input.binding}}"
+        u32 _i;
+        u32 _itemCount = {{input.keyRanges|join("*", attribute='sizeExpr')}};
+        u32 _dims[] = { {{input.keyRanges|join(", ", attribute='sizeExpr')}} };
+        // XXX - I'd like to use pdMalloc here instead of creating a datablock
+        _block_{{input.binding}} = _cncRangedInputAlloc({{
+                input.keyRanges|count}}, _dims, sizeof({{input.collName}}Item));
+        {{input.binding}} = ({{util.ranged_type(input)}}) _block_{{input.binding}}.ptr;
+        {{input.collName}}Item *_item = {{
+             ("*" * (input.keyRanges|count - 1)) ~ input.binding}};
+        for (_i=0; _i<_itemCount; _i++, _item++) {
+            _item->item = {{unpack_item(input)}}depv[_edtSlot].ptr;
+            _item->handle = depv[_edtSlot++].guid;
+        }
+    }
+    {% else -%}
+    {#/*SCALAR*/-#}
+    {{input.binding}}.item = {{unpack_item(input)}}depv[_edtSlot].ptr;
+    {{input.binding}}.handle = depv[_edtSlot++].guid;
+    {% endif -%}
     {% endfor %}
     // Call user-defined step function
+    {{ util.log_msg("RUNNING", stepfun.collName, stepfun.tag) }}
     {{stepfun.collName}}({{ util.print_tag(stepfun.tag) ~ util.print_bindings(stepfun.inputs) }}ctx);
     {% if isFinalizer %}
     // Signal that the finalizer is done
     ocrEventSatisfy(ctx->_guids.finalizedEvent, NULL_GUID);
     {% endif %}
-    // TODO - Clean up
+    // Clean up
+    {% for input in stepfun.inputs -%}
+    {% if input.keyRanges -%}
+    CNC_DESTROY_ITEM(_block_{{input.binding}}.guid);
+    {% endif -%}
+    {% endfor -%}
     {{ util.log_msg("DONE", stepfun.collName, stepfun.tag) }}
     return NULL_GUID;
 }

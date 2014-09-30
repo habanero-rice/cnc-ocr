@@ -2,6 +2,7 @@
 
 {% block arch_itemcoll_defs %}
 #include <string.h>
+#define CNC_MEMCMP memcmp
 
 #define DEPS_BUCKET 3 /* must be >=3 */
 
@@ -18,6 +19,7 @@ typedef struct ItemCollEntry {
     char creator; /* Who created this entry (could be from a Put or a Get)*/
     unsigned char tag[]; /* Tags are byte arrays, with a known length for each item collection */
 } ItemCollectionEntry;
+
 {% endblock arch_itemcoll_defs %}
 
 {% block arch_itemcoll_impl %}
@@ -50,10 +52,10 @@ static ItemCollectionEntry * _allocateEntryIfAbsent(
                 // XXX - PutIfAbsent is kind of broken here if creator is GET
                 // but using IDEM events still gives the correct behavior
                 if ((current->creator == CNC_PUTTER) && (creator == CNC_PUTTER)) {
-                    if (isSingleAssignment)
+                    if (isSingleAssignment) {
                         ASSERT(!"Single assignment rule violated in item collection put");
-                    else
-                        return NULL;
+                    }
+                    return NULL;
                 }
                 return current; /* just return the table entry if it already has the tag */
             }

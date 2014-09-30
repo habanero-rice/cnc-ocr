@@ -5,9 +5,17 @@
 #ifndef {{defname}}
 #define {{defname}}
 
-#include <ocr.h>
+#include "ocr.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#if defined(__i386__) || defined(__x86_64__)
+#    define CNCOCR_x86 1
+#elif defined(TG_ARCH)
+#    define CNCOCR_TG 1
+#else
+#    warning UNKNOWN PLATFORM (possibly unsupported)
+#endif
 
 {% block arch_includes %}{% endblock arch_includes %}
 /********************************\
@@ -55,31 +63,15 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 #define OCR_MAIN_ARGV(i) OCR_ARGV(depv[0], i)
 #define OCR_ARGV(dep, i) getArgv(dep.ptr, i)
 
-// XXX - this should use doneEvent, but finishEDTs are broken right now
-// so I have to make due with finalizedEvent instead until they're fixed.
-#define CNC_SHUTDOWN_ON_FINISH(ctx) cncAutomaticShutdown((ctx)->_guids.finalizedEvent)
+#define CNC_SHUTDOWN_ON_FINISH(ctx) cncAutomaticShutdown((ctx)->_guids.doneEvent)
 
 /*****************************************\
 ********* CNC COMPATIBILITY MACROS ********
 \*****************************************/
 {% block arch_compat_macros %}
-// XXX - how do we access pdMalloc / pdFree in OCR?
-//#warning MALLOC undefined for current platform (falling back to stdlib.h)
-extern void *malloc(size_t);
-#define MALLOC malloc
-
-//#warning FREE undefined for current platform (falling back to stdlib.h)
-extern void free(void*);
-#define FREE free
-
-// XXX - do we need to implement these ourselves?
-//#warning MEMCPY undefined for current platform (falling back to string.h)
-extern void *memcpy(void *dest, const void *src, size_t n);
-#define MEMCPY memcpy
-
-//#warning MEMCMP undefined for current platform (falling back to string.h)
-extern int memcmp(const void *s1, const void *s2, size_t n);
-#define MEMCMP memcmp
+// XXX - re-enalbe these when we get pdMalloc from OCR
+//#define MALLOC pdMalloc
+//#define FREE   pdFree
 {% endblock arch_compat_macros %}
 
 #endif /*{{defname}}*/

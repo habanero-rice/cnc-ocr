@@ -7,6 +7,4 @@ typedef struct ItemCollEntry **cncItemCollection_t; // item collections
 {% block arch_compat_macros %}
 #define MALLOC malloc
 #define FREE free
-#define MEMCPY memcpy
-#define MEMCMP memcmp
 {% endblock arch_compat_macros %}

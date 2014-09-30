@@ -44,14 +44,6 @@ void swStep(cncTag_t i, cncTag_t j, dataItem data, aboveItem above, leftItem lef
         }
     }
 
-    int *below;
-    cncHandle_t below_handle = cncCreateItem_above(&below, data.item->tw+1);
-    for (index = 0; index <= data.item->tw; index++) {
-        below[index] = curr_tile[data.item->th][index];
-    }
-    cncPut_above(below_handle, i+1, j, ctx);
-    ASSERT(left.item[data.item->th] == below[0]);
-
     int *right;
     cncHandle_t right_handle = cncCreateItem_left(&right, data.item->th+1);
     for (index = 0; index <= data.item->th; index++) {
@@ -59,6 +51,14 @@ void swStep(cncTag_t i, cncTag_t j, dataItem data, aboveItem above, leftItem lef
     }
     cncPut_left(right_handle, i, j+1, ctx);
     ASSERT(above.item[data.item->tw] == right[0]);
+
+    int *below;
+    cncHandle_t below_handle = cncCreateItem_above(&below, data.item->tw+1);
+    for (index = 0; index <= data.item->tw; index++) {
+        below[index] = curr_tile[data.item->th][index];
+    }
+    cncPut_above(below_handle, i+1, j, ctx);
+    ASSERT(left.item[data.item->th] == below[0]);
 
     /* Cleanup */
     free(curr_tile);

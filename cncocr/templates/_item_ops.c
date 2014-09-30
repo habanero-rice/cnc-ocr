@@ -8,6 +8,7 @@
 
 cncHandle_t cncCreateItemSized_{{i.collName}}({{i.type.ptrType}}*item, size_t size) {
     cncHandle_t handle;
+    // XXX - do I need to check for busy (and do a retry)?
     CNC_CREATE_ITEM(&handle, (void**)item, size);
     return handle;
 }
@@ -17,6 +18,7 @@ void cncPutChecked_{{i.collName}}(cncHandle_t handle, {{
         }}bool checkSingleAssignment, {{g.name}}Ctx *ctx) {
     {% if not i.isVirtual -%}
     {#/*****NON-VIRTUAL*****/-#}
+    {{ util.log_msg("PUT", i.collName, i.key) }}
     {% if i.key -%}
     cncTag_t tag[] = { {{i.key|join(", ")}} };
     _cncPut(handle, (unsigned char*)tag, sizeof(tag), ctx->_items.{{i.collName}}, checkSingleAssignment);
@@ -44,6 +46,7 @@ void cncPutChecked_{{i.collName}}(cncHandle_t handle, {{
 void cncGet_{{i.collName}}({{ util.print_tag(i.key, typed=True) }}ocrGuid_t destination, u32 slot, ocrDbAccessMode_t mode, {{g.name}}Ctx *ctx) {
     {% if not i.isVirtual -%}
     {#/*****NON-VIRTUAL*****/-#}
+    {{ util.log_msg("GET-DEP", i.collName, i.key) }}
     {% if i.key -%}
     cncTag_t tag[] = { {{i.key|join(", ")}} };
     return _cncGet((unsigned char*)tag, sizeof(tag), destination, slot, mode, ctx->_items.{{i.collName}});

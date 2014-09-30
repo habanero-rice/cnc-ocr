@@ -11,8 +11,8 @@
     // store a copy of its guid inside
     context->_guids.self = contextGuid;
     // initialize graph events
-    ocrEventCreate(&context->_guids.finalizedEvent, OCR_EVENT_ONCE_T, true);
-    ocrEventCreate(&context->_guids.doneEvent, OCR_EVENT_ONCE_T, true);
+    ocrEventCreate(&context->_guids.finalizedEvent, OCR_EVENT_STICKY_T, true);
+    ocrEventCreate(&context->_guids.doneEvent, OCR_EVENT_STICKY_T, true);
     ocrEventCreate(&context->_guids.awaitTag, OCR_EVENT_ONCE_T, true);
     // initialize item collections
     {% call util.render_indented(1) -%}
@@ -21,8 +21,8 @@ s32 i;
 ocrGuid_t *itemTable;
 {% for i in g.concreteItems -%}
 {% if i.key -%}
-CNC_CREATE_ITEM(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * (CNC_TABLE_SIZE+1));
-for (i=0; i<=CNC_TABLE_SIZE; i++) itemTable[i] = NULL_GUID;
+CNC_CREATE_ITEM(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * CNC_TABLE_SIZE);
+for (i=0; i<CNC_TABLE_SIZE; i++) itemTable[i] = NULL_GUID;
 {% else -%}
 ocrEventCreate(&context->_items.{{i.collName}}, OCR_EVENT_IDEM_T, true);
 {% endif -%}
@@ -38,6 +38,8 @@ ocrEventCreate(&context->_items.{{i.collName}}, OCR_EVENT_IDEM_T, true);
 }
 
 void {{g.name}}_destroy({{g.name}}Ctx *context) {
+    ocrEventDestroy(context->_guids.finalizedEvent);
+    ocrEventDestroy(context->_guids.doneEvent);
     // destroy item collections
     // XXX - need to do a deep free by traversing the table
     {% call util.render_indented(1) -%}
@@ -65,6 +67,7 @@ static ocrGuid_t _emptyEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[
 static ocrGuid_t _graphFinishEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     {{g.name}}Args *args = depv[0].ptr;
     {{g.name}}Ctx *context = depv[1].ptr;
+    // XXX - just do finalize from within the finish EDT
     // The graph isn't done until the finalizer runs as well,
     // so we need to make a dummy EDT depending on the
     // finalizer's output event.
@@ -88,6 +91,8 @@ static ocrGuid_t _finalizerEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t d
     cncPrescribe_{{g.finalizeFunction.collName}}(
         {%- for x in g.finalizeFunction.tag %}tag[{{loop.index0}}], {% endfor -%}
         context);
+    // XXX - for some reason this causes a segfault?
+    //CNC_DESTROY_ITEM(depv[1].guid);
     return NULL_GUID;
 }
 
@@ -95,6 +100,7 @@ void {{g.name}}_launch({{g.name}}Args *args, {{g.name}}Ctx *context) {
     {{g.name}}Args *argsCopy;
     ocrGuid_t graphEdtGuid, finalEdtGuid, edtTemplateGuid, outEventGuid, argsDbGuid;
     // copy the args struct into a data block
+    // TODO - I probably need to free this sometime
     CNC_CREATE_ITEM(&argsDbGuid, (void**)&argsCopy, sizeof(*args));
     *argsCopy = *args;
     // create a finish EDT for the CnC graph

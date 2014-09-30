@@ -13,7 +13,7 @@
 {% if logEnabled %}
     fprintf(stderr, "<#CNC_LOG#> {{msgType}} {{collName}} @ {{
             (['%lu'] * tag|count)|join(', ') if tag else 0 }}\n"{{
-            ([""]+tag)|join(', ') }});
+            ([""] + tag|list)|join(', ') }});
 {% endif -%}
 {%- endmacro %}
 
@@ -27,10 +27,15 @@
 {% for x in tag %}{% if typed %}cncTag_t {% endif %}{{prefix ~ x}}, {% endfor -%}
 {%- endmacro %}
 
+{#/****** Print ranged type for item collection ******/#}
+{% macro ranged_type(item) -%}
+{{item.collName}}Item {{"*" * item.keyRanges|count}}
+{%- endmacro %}
+
 {#/****** Print bindings for a list of items ******/#}
 {% macro print_bindings(items, typed=False) -%}
 {% for i in items %}
-{%- if typed %}{{i.collName}}Item {{"*" * i.keyRanges|count}}{% endif -%}
+{%- if typed %}{{ ranged_type(i) }}{% endif -%}
 {{i.binding}}, {% endfor -%}
 {%- endmacro %}
 
@@ -39,34 +44,23 @@
 {% for x in xs %}[{{x}}]{% endfor -%}
 {%- endmacro %}
 
-{#/* TODO: There should be a way to combine the following two macros */#}
-
+{#/* TODO: There should be a way to combine the following two macros
+     (especially now since I lifted out the memory allocation stuff) */#}
 {#/****** For-loop nest for iterating over a multi-dimentional
           item array based on a ranged tag function ******/#}
-{% macro render_tag_nest(comment, item, malloc=False) %}
+{% macro render_tag_nest(comment, item) %}
 {% set ranges = [] -%}
-{% set stars = ("*" * item.keyRanges|count)|list -%}
-{% macro iType() %}{{item.collName ~ "Item " ~ stars|join}}{% endmacro -%}
 {% macro iVarIndexed() %}{{item.binding ~ ranges|join}}{% endmacro -%}
-{% if malloc -%}
-{{iType() ~ item.binding}};
-{% endif -%}
 { // {{comment}}
 {%- for k in item.key -%}
 {% call render_indented(1 + ranges|count) -%}
 {% set idx = "_i" ~ loop.index0 -%}
 {% if k.isRanged %}{#/* Range */#}
 s64 {{idx}};
-{% if malloc -%}
-{% do stars.pop() -%}
-{{iVarIndexed()}} = MALLOC(sizeof({{iType()|trim}}) * {{k.sizeExpr}});
-// XXX - This needs to get freed at some point
-{% endif -%}
 for ({{idx}} = 0; {{idx}} < {{k.sizeExpr}}; {{idx}}++) {
 {%- do ranges.append("["~idx~"]") -%}
 {%- else %}{#/* Scalar */#}
 s64 {{idx}} = {{k.expr}};
-{%- if malloc %} MAYBE_UNUSED({{idx}});{% endif %}
 {%- endif -%}
 {%- endcall -%}
 {%- endfor -%}

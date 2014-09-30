@@ -19,5 +19,6 @@ void SimpleGraph_init(SimpleGraphArgs *args, SimpleGraphCtx *ctx) {
  */
 void SimpleGraph_finalize(XItem X, YItem Y, SimpleGraphCtx *ctx) {
     // Print results
-    PRINTF("X = %d\nY = %d\n", X.item, Y.item);
+    PRINTF("X = %d\n", X.item);
+    PRINTF("Y = %d\n", Y.item);
 }

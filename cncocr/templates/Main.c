@@ -5,10 +5,6 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     // Create a new graph context
     {{g.name}}Ctx *context = {{g.name}}_create();
 
-    // Exit when the graph execution completes
-    // NOTE: This call MUST come before {{g.name}}_launch
-    CNC_SHUTDOWN_ON_FINISH(context);
-    
     // Set up arguments for new graph instantiation
     {{g.name}}Args args = {
         /* TODO: initialize custom arguments
@@ -25,5 +21,8 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     // Launch the graph for execution
     {{g.name}}_launch(&args, context);
 
+    // Exit when the graph execution completes
+    CNC_SHUTDOWN_ON_FINISH(context);
+    
     return NULL_GUID;
 }

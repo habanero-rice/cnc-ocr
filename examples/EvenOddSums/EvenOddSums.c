@@ -30,8 +30,8 @@ void EvenOddSums_init(EvenOddSumsArgs *args, EvenOddSumsCtx *ctx) {
  * typeof oddsTotal is int 
  */
 void EvenOddSums_finalize(evensTotalItem evensTotal, oddsTotalItem oddsTotal, EvenOddSumsCtx *ctx) {
-    printf("Even total = %d\n", evensTotal.item);
-    printf("Odd total = %d\n", oddsTotal.item);
+    PRINTF("Even total = %d\n", evensTotal.item);
+    PRINTF("Odd total = %d\n", oddsTotal.item);
 }
 
 
