@@ -10,8 +10,14 @@ argParser = argparse.ArgumentParser(prog="cncocr_t", description="Process CnC-OC
 argParser.add_argument('--log', action='store_true', help="turn on debug logging for CnC steps")
 argParser.add_argument('--platform', choices=['x86', 'ocr'], default='x86', help="target platform for the CnC-OCR runtime")
 argParser.add_argument('--full-make', action='store_true', help="Use the full OCR build system by default (changes the Makefile symlink)")
+argParser.add_argument('--fsim', action='store_true', help="alias of --platform=ocr --full-make")
 argParser.add_argument('specfile', help="CnC-OCR graph spec file")
 args = argParser.parse_args()
+
+# Handle aliases
+if args.fsim:
+    args.platform='ocr'
+    args.full_make=True
 
 # Check spec file name
 nameMatch = re.match(r'^(.*/)?(?P<name>[a-zA-Z]\w*)(?P<cnc>\.cnc)?$', args.specfile)

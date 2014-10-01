@@ -15,6 +15,9 @@ OCR_INSTALL_ROOT ?= $(XSTACK_SRC)/ocr/install
 OCR_SRC     ?= $(XSTACK_SRC)/ocr
 OCR_BUILD_ROOT   ?= $(XSTACK_SRC)/ocr/build
 
+# Use lockable OCR config
+OCR_CONFIG ?= $(OCR_INSTALL_ROOT)/$(OCR_TARGET)/config/jenkins-1block-lockableDB.cfg
+
 # APPLICATION
 WORKLOAD_SRC          ?= ./cncocr_support/workload_src
 WORKLOAD_BUILD_ROOT   ?= ./build
