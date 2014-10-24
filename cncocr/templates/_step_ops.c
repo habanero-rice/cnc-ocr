@@ -12,14 +12,20 @@
 
 {% for stepfun in g.finalAndSteps %}
 {% set isFinalizer = loop.first -%}
+{% set paramTag = (stepfun.tag|count) <= 8 -%}
 /* {{stepfun.collName}} setup/teardown function */
 ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     {{g.name}}Ctx *ctx = depv[0].ptr;
 
+    u64 *_tag = {{ "paramv" if paramTag else "depv[1].ptr" }}; MAYBE_UNUSED(_tag);
+    // {{ paramTag }} ; {{ stepfun.tag }}
     {% for x in stepfun.tag -%}
-    const cncTag_t {{x}} = (cncTag_t)paramv[{{loop.index0}}]; MAYBE_UNUSED({{x}});
-    {% endfor %}
-    s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
+    const cncTag_t {{x}} = (cncTag_t)_tag[{{loop.index0}}]; MAYBE_UNUSED({{x}});
+    {% endfor -%}
+    {% if not paramTag -%}
+    CNC_DESTROY_ITEM(depv[1].guid); // free tag component datablock
+    {% endif %}
+    s32 _edtSlot = {{ 1 if paramTag else 2 }}; MAYBE_UNUSED(_edtSlot);
     {#-/****** Set up input items *****/#}
     {% for input in stepfun.inputs %}
     {{ util.ranged_type(input) ~ input.binding }};
@@ -76,18 +82,27 @@ void cncPrescribe_{{stepfun.collName}}({{
           (rectangular) case might be possible. */ -#}
     {% if stepfun.tag -%}
     u64 _args[] = { (u64){{ stepfun.tag|join(", (u64)") }} };
+    {% if not paramTag -%}
+    ocrGuid_t _tagBlockGuid;
+    u64 *_tagBlockPtr;
+    CNC_CREATE_ITEM(&_tagBlockGuid, (void**)&_tagBlockPtr, sizeof(_args));
+    hal_memCopy(_tagBlockPtr, _args, sizeof(_args), 0);
+    {% endif -%}
     {% else -%}
     u64 *_args = NULL;
     {% endif -%}
-    u64 _depc = {{stepfun.inputCountExpr}} + 1;
+    u64 _depc = {{stepfun.inputCountExpr}} + {{ 1 if paramTag else 2 }};
     ocrEdtCreate(&_stepGuid, ctx->_steps.{{stepfun.collName}},
-        /*paramc=*/{{stepfun.tag|count}}, /*paramv=*/_args,
+        /*paramc=*/{{ (stepfun.tag|count) if paramTag else 0 }}, /*paramv=*/_args,
         /*depc=*/_depc, /*depv=*/NULL,
         /*properties=*/EDT_PROP_NONE,
         /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
 
     s32 _edtSlot = 0; MAYBE_UNUSED(_edtSlot);
     ocrAddDependence(ctx->_guids.self, _stepGuid, _edtSlot++, DB_MODE_RO);
+    {% if not paramTag -%}
+    ocrAddDependence(_tagBlockGuid, _stepGuid, _edtSlot++, DB_MODE_RO);
+    {% endif -%}
 
     {#-/****** Set up input items *****/#}
     {% for input in stepfun.inputs %}

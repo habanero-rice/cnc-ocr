@@ -11,9 +11,10 @@
 {#/****** Indent calling block to the specified level ******/#}
 {% macro log_msg(msgType, collName, tag) -%}
 {% if logEnabled %}
-    fprintf(stderr, "<#CNC_LOG#> {{msgType}} {{collName}} @ {{
-            (['%lu'] * tag|count)|join(', ') if tag else 0 }}\n"{{
+    fprintf(cncDebugLog, "{{msgType}} {{collName}} @ {{
+            (['%ld'] * tag|count)|join(', ') if tag else 0 }}\n"{{
             ([""] + tag|list)|join(', ') }});
+    fflush(cncDebugLog);
 {% endif -%}
 {%- endmacro %}
 

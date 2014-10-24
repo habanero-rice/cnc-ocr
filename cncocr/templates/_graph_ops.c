@@ -4,6 +4,14 @@
 #include "{{g.name}}_internal.h"
 
 {{g.name}}Ctx *{{g.name}}_create() {
+{% if logEnabled %}
+    // init debug logger (only once)
+    if (!cncDebugLog) {
+        const char *logPath = getenv("CNC_LOG");
+        if (!logPath) logPath = "./cnc_events.log";
+        cncDebugLog = fopen(logPath ,"w");
+    }
+{% endif -%}
     // allocate the context datablock
     ocrGuid_t contextGuid;
     {{g.name}}Ctx *context;

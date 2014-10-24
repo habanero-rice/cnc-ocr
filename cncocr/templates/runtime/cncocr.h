@@ -12,6 +12,9 @@
 #if defined(__i386__) || defined(__x86_64__)
 #    define CNCOCR_x86 1
 #elif defined(TG_ARCH)
+{% if logEnabled %}
+#    error "CnC logging is not supported on FSim."
+{% endif -%}
 #    define CNCOCR_TG 1
 #else
 #    warning UNKNOWN PLATFORM (possibly unsupported)
@@ -74,4 +77,11 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 //#define FREE   pdFree
 {% endblock arch_compat_macros %}
 
+{% if logEnabled %}
+/**********************************\
+********* CNC DEBUG LOGGING ********
+\**********************************/
+extern FILE *cncDebugLog;
+
+{% endif -%}
 #endif /*{{defname}}*/

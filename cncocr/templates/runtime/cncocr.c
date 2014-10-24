@@ -7,17 +7,12 @@
 // Then satisfying the event would give the desired behavior.
 // (We'd also have to check if it's an event or a data block guid.)
 #}
+{% if logEnabled %}
+FILE *cncDebugLog;
+
+{% endif -%}
 {% block arch_itemcoll_defs %}
 // XXX - depending on misc.h for HAL on FSim
-#define USE_OCR_HAL 1
-#if !USE_OCR_HAL
-static void _cncMemCopy(void *dest, const void *src, size_t n) {
-    u8 *x = (u8*)dest;
-    const u8 *y = (const u8*)src;
-    size_t i;
-    for (i=0; i<n; i++) x[i] = y[i];
-}
-#endif // USE_OCR_HAL
 
 // XXX - increase this (I just wanted to set it small so I can see if it's working)
 #define CNC_ITEMS_PER_BLOCK 8
@@ -76,13 +71,8 @@ static ocrGuid_t _itemBlockInsert(ItemBlock *block, u8 *tag, ocrGuid_t entry, u3
         block->entries[i].isEvent = false;
         block->entries[i].guid = entry;
     }
-#if USE_OCR_HAL
     hal_memCopy(&block->tags[i*tagLength], tag, tagLength, 0);
     hal_fence();
-#else
-    _cncMemCopy(&block->tags[i*tagLength], tag, tagLength);
-    // XXX - do we need some sort of memory barrier here on FSim?
-#endif // USE_OCR_HAL
     block->count += 1;
     return block->entries[i].guid;
 }
@@ -320,11 +310,7 @@ static void _itemCollUpdate(ocrGuid_t coll, u8 *tag, u32 tagLength, u8 role, ocr
     params->role = role;
     params->slot = slot;
     params->mode = mode;
-#if USE_OCR_HAL
     hal_memCopy(params->tag, tag, tagLength, 0);
-#else
-    _cncMemCopy(params->tag, tag, tagLength);
-#endif // USE_OCR_HAL
     // edt
     ocrGuid_t deps[] = { coll, paramsGuid };
     ocrGuid_t shutdownEdtGuid, templGuid;
@@ -360,6 +346,9 @@ void _cncGetSingleton(ocrGuid_t destination, u32 slot, ocrDbAccessMode_t mode, o
 }
 
 static ocrGuid_t _shutdownEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+{% if logEnabled %}
+    fclose(cncDebugLog);
+{% endif -%}
     ocrShutdown();
     return NULL_GUID;
 }

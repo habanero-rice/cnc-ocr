@@ -23,6 +23,8 @@ CNC_OP_SRCS := $(patsubst %,cncocr_support/{{g.name}}_%_ops.c,step item graph)
 SRCS := Main.c {{g.name}}.c $(CNC_OP_SRCS) $(CNC_STEP_SRCS) $(CNC_RUNTIME_SRCS)
 OBJS := $(patsubst %.c,%.o,$(SRCS))
 
+CFG_NAME ?= default.cfg
+
 compile: $(TARGET)
 
 # building source files
@@ -38,7 +40,7 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 
 run: compile
-	OCR_CONFIG=$(OCR_INSTALL)/config/default.cfg ./$(TARGET) $(ARGS)
+	OCR_CONFIG=$(OCR_INSTALL)/config/$(CFG_NAME) ./$(TARGET) $(ARGS)
 
 gdb: compile
-	OCR_CONFIG=$(OCR_INSTALL)/config/default.cfg gdb ./$(TARGET) -ex "r $(ARGS)"
+	OCR_CONFIG=$(OCR_INSTALL)/config/$(CFG_NAME) gdb ./$(TARGET) -ex "r $(ARGS)"
