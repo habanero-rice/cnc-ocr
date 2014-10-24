@@ -93,7 +93,11 @@ void cncPrescribe_{{stepfun.collName}}({{
     {% endif -%}
     u64 _depc = {{stepfun.inputCountExpr}} + {{ 1 if paramTag else 2 }};
     ocrEdtCreate(&_stepGuid, ctx->_steps.{{stepfun.collName}},
-        /*paramc=*/{{ (stepfun.tag|count) if paramTag else 0 }}, /*paramv=*/_args,
+        {% if paramTag -%}
+        /*paramc=*/{{(stepfun.tag|count)}}, /*paramv=*/_args,
+        {% else -%}
+        /*paramc=*/0, /*paramv=*/NULL,
+        {% endif -%}
         /*depc=*/_depc, /*depv=*/NULL,
         /*properties=*/EDT_PROP_NONE,
         /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
