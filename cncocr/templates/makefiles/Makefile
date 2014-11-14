@@ -8,7 +8,10 @@ endif
 
 OCR_TYPE ?= x86-pthread-x86
 
-MAKE := make
+# Disable error-on-warning
+CFLAGS_BASE_WARN_ERROR := no
+
+MAKE := make -e
 
 # Name of the application to build
 TARGET := {{g.name}}
@@ -22,7 +25,7 @@ CFLAGS := -I. -I./cncocr_support
 # the required OCR library path and apps/libs/<target/lib
 # Note that none of the specific libraries specified in
 # REQ_LIBS are included.
-LDFLAGS := 
+LDFLAGS := -lm
 
 # If 0, the workload has no input file
 # # If 1+, this is the index in the argument

@@ -1,4 +1,7 @@
 #include "cncocr_internal.h"
+{% if affinitiesEnabled -%}
+#include <extensions/ocr-affinity.h>
+{% endif %}
 {#
 // TODO:
 // Instead of having a isSingleAssignment argument for each of the
@@ -15,7 +18,7 @@ FILE *cncDebugLog;
 // XXX - depending on misc.h for HAL on FSim
 
 // XXX - increase this (I just wanted to set it small so I can see if it's working)
-#define CNC_ITEMS_PER_BLOCK 8
+#define CNC_ITEMS_PER_BLOCK 64
 #define CNC_ITEM_BLOCK_FULL(block) ((block)->count == CNC_ITEMS_PER_BLOCK)
 #define CNC_GETTER_GUID ((ocrGuid_t)-1)
 #define CNC_GETTER_ROLE 'G'
@@ -23,10 +26,10 @@ FILE *cncDebugLog;
 
 typedef struct {
     ocrGuid_t entry;
-    ocrGuid_t collection;
+    ocrGuid_t bucketHead;
     ocrGuid_t firstBlock;
     ocrGuid_t oldFirstBlock;
-    u32 bucketIndex;
+    ocrGuid_t affinity;
     u32 firstBlockCount;
     u32 tagLength;
     u32 slot;
@@ -98,9 +101,13 @@ static bool _equals(u8 *tag1, u8 *tag2, u32 length) {
 /* Hash function implementation. Fast and pretty good */
 static u64 _hash_function(u8 *str, u32 length) {
     u64 hash = 5381;
-    u32 c;
-    while (length-- > 0) {
-        c = *str++;
+    u64 c;
+    // All tags should be composed of longs, but even if
+    // they're not, part of it is just ignored for the hash.
+    u64 *components = (u64*)str;
+    u32 n = length / sizeof(u64);
+    while (n-- > 0) {
+        c = *components++;
         hash = ((hash << 5) + hash) + c; // hash * 33 + c
     }
     return hash;
@@ -123,12 +130,13 @@ static ocrGuid_t _addToBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
     ocrGuid_t *blockArray = depv[0].ptr;
     ItemCollOpParams *params = depv[1].ptr;
     ocrGuid_t paramsGuid = depv[1].guid;
+    const u32 index = 0;
     // look up the first block the bucket
-    ocrGuid_t firstBlock = blockArray[params->bucketIndex];
+    ocrGuid_t firstBlock = blockArray[index];
     // is our first block still first?
     if (firstBlock == params->firstBlock) {
         ItemBlock *newFirst;
-        blockArray[params->bucketIndex] = _itemBlockCreate(params->tagLength, firstBlock, &newFirst);
+        blockArray[index] = _itemBlockCreate(params->tagLength, firstBlock, &newFirst);
         // XXX - repeated code, also in addToBlock
         bool isGetter = (params->role == CNC_GETTER_ROLE);
         ocrGuid_t src = isGetter ? CNC_GETTER_GUID : params->entry;
@@ -151,7 +159,7 @@ static ocrGuid_t _addToBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
             /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
             /*depc=*/EDT_PARAM_DEF, /*depv=*/deps,
             /*properties=*/EDT_PROP_NONE,
-            /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
+            /*affinity=*/params->affinity, /*outEvent=*/NULL);
         ocrEdtTemplateDestroy(templGuid);
     }
     return NULL_GUID;
@@ -196,8 +204,8 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
             /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
             /*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,
             /*properties=*/EDT_PROP_NONE,
-            /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
-        ocrAddDependence(params->collection, addEdtGuid, 0, DB_MODE_EW);
+            /*affinity=*/params->affinity, /*outEvent=*/NULL);
+        ocrAddDependence(params->bucketHead, addEdtGuid, 0, DB_MODE_EW);
         ocrAddDependence(paramsGuid, addEdtGuid, 1, DB_DEFAULT_MODE);
         ocrEdtTemplateDestroy(templGuid);
     }
@@ -239,7 +247,7 @@ static ocrGuid_t _searchBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_
             /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
             /*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,
             /*properties=*/EDT_PROP_NONE,
-            /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
+            /*affinity=*/params->affinity, /*outEvent=*/NULL);
         ocrAddDependence(params->firstBlock, addEdtGuid, 0, DB_MODE_EW);
         ocrAddDependence(paramsGuid, addEdtGuid, 1, DB_DEFAULT_MODE);
         ocrEdtTemplateDestroy(templGuid);
@@ -253,7 +261,41 @@ static ocrGuid_t _searchBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_
             /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
             /*depc=*/EDT_PARAM_DEF, /*depv=*/deps,
             /*properties=*/EDT_PROP_NONE,
-            /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
+            /*affinity=*/params->affinity, /*outEvent=*/NULL);
+        ocrEdtTemplateDestroy(templGuid);
+    }
+    return NULL_GUID;
+}
+
+static ocrGuid_t _bucketHeadEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    // unpack
+    ocrGuid_t *blockArray = depv[0].ptr;
+    ItemCollOpParams *params = depv[1].ptr;
+    ocrGuid_t paramsGuid = depv[1].guid;
+    // save bucket info for first block
+    params->firstBlock = blockArray[0];
+    if (params->firstBlock == NULL_GUID) { // empty bucket
+        // might need to add a new block to the bucket
+        ocrGuid_t addEdtGuid, templGuid;
+        ocrEdtTemplateCreate(&templGuid, _addToBucketEdt, 0, 2);
+        ocrEdtCreate(&addEdtGuid, templGuid,
+            /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
+            /*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,
+            /*properties=*/EDT_PROP_NONE,
+            /*affinity=*/params->affinity, /*outEvent=*/NULL);
+        ocrAddDependence(params->bucketHead, addEdtGuid, 0, DB_MODE_EW);
+        ocrAddDependence(paramsGuid, addEdtGuid, 1, DB_DEFAULT_MODE);
+        ocrEdtTemplateDestroy(templGuid);
+    }
+    else { // search the bucket
+        ocrGuid_t deps[] = { params->firstBlock, paramsGuid };
+        ocrGuid_t searchEdtGuid, templGuid;
+        ocrEdtTemplateCreate(&templGuid, _searchBucketEdt, 0, 2);
+        ocrEdtCreate(&searchEdtGuid, templGuid,
+            /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
+            /*depc=*/EDT_PARAM_DEF, /*depv=*/deps,
+            /*properties=*/EDT_PROP_NONE,
+            /*affinity=*/params->affinity, /*outEvent=*/NULL);
         ocrEdtTemplateDestroy(templGuid);
     }
     return NULL_GUID;
@@ -268,34 +310,19 @@ static ocrGuid_t _doHashEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv
     u64 hash = _hash_function(params->tag, params->tagLength);
     u32 index = hash % CNC_TABLE_SIZE;
     // save bucket info
-    params->bucketIndex = index;
-    params->firstBlock = blockArray[index];
+    params->bucketHead = blockArray[index];
     params->oldFirstBlock = NULL_GUID;
     params->checkedFirst = 0;
-    if (params->firstBlock == NULL_GUID) { // empty bucket
-        // might need to add a new block to the bucket
-        ocrGuid_t addEdtGuid, templGuid;
-        ocrEdtTemplateCreate(&templGuid, _addToBucketEdt, 0, 2);
-        ocrEdtCreate(&addEdtGuid, templGuid,
-            /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
-            /*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,
-            /*properties=*/EDT_PROP_NONE,
-            /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
-        ocrAddDependence(params->collection, addEdtGuid, 0, DB_MODE_EW);
-        ocrAddDependence(paramsGuid, addEdtGuid, 1, DB_DEFAULT_MODE);
-        ocrEdtTemplateDestroy(templGuid);
-    }
-    else { // search the bucket
-        ocrGuid_t deps[] = { params->firstBlock, paramsGuid };
-        ocrGuid_t searchEdtGuid, templGuid;
-        ocrEdtTemplateCreate(&templGuid, _searchBucketEdt, 0, 2);
-        ocrEdtCreate(&searchEdtGuid, templGuid,
-            /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
-            /*depc=*/EDT_PARAM_DEF, /*depv=*/deps,
-            /*properties=*/EDT_PROP_NONE,
-            /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
-        ocrEdtTemplateDestroy(templGuid);
-    }
+    // go into bucket
+    ocrGuid_t deps[] = { params->bucketHead, paramsGuid };
+    ocrGuid_t bucketEdtGuid, templGuid;
+    ocrEdtTemplateCreate(&templGuid, _bucketHeadEdt, 0, 2);
+    ocrEdtCreate(&bucketEdtGuid, templGuid,
+        /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
+        /*depc=*/EDT_PARAM_DEF, /*depv=*/deps,
+        /*properties=*/EDT_PROP_NONE,
+        /*affinity=*/params->affinity, /*outEvent=*/NULL);
+    ocrEdtTemplateDestroy(templGuid);
     return NULL_GUID;
 }
 
@@ -304,22 +331,30 @@ static void _itemCollUpdate(ocrGuid_t coll, u8 *tag, u32 tagLength, u8 role, ocr
     ocrGuid_t paramsGuid;
     ItemCollOpParams *params;
     CNC_CREATE_ITEM(&paramsGuid, (void**)&params, sizeof(ItemCollOpParams)+tagLength);
-    params->collection = coll;
     params->entry = entry;
     params->tagLength = tagLength;
     params->role = role;
     params->slot = slot;
     params->mode = mode;
     hal_memCopy(params->tag, tag, tagLength, 0);
+    // affinity
+    // TODO - affinitizing each bucket with node, and running all the 
+    // lookup stuff on that node would probably be cheaper.
+    {% if affinitiesEnabled -%}
+    ocrAffinityGetCurrent(&params->affinity);
+    {%- else -%}
+    params->affinity = NULL_GUID;
+    {%- endif %}
     // edt
-    ocrGuid_t deps[] = { coll, paramsGuid };
-    ocrGuid_t shutdownEdtGuid, templGuid;
+    ocrGuid_t hashEdtGuid, templGuid;
     ocrEdtTemplateCreate(&templGuid, _doHashEdt, 0, 2);
-    ocrEdtCreate(&shutdownEdtGuid, templGuid,
+    ocrEdtCreate(&hashEdtGuid, templGuid,
         /*paramc=*/EDT_PARAM_DEF, /*paramv=*/NULL,
-        /*depc=*/EDT_PARAM_DEF, /*depv=*/deps,
+        /*depc=*/EDT_PARAM_DEF, /*depv=*/NULL,
         /*properties=*/EDT_PROP_NONE,
-        /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
+        /*affinity=*/params->affinity, /*outEvent=*/NULL);
+    ocrAddDependence(coll, hashEdtGuid, 0, DB_MODE_RO);
+    ocrAddDependence(paramsGuid, hashEdtGuid, 1, DB_DEFAULT_MODE);
     ocrEdtTemplateDestroy(templGuid);
 }
 

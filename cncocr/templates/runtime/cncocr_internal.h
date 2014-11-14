@@ -20,7 +20,7 @@ extern void *memcpy(void *dest, const void *src, size_t n);
 #    warning UNKNOWN PLATFORM (possibly unsupported)
 #endif
 
-#define CNC_TABLE_SIZE 512 /* TODO - Table size should be set by the user when initializing the item collection */
+#define CNC_TABLE_SIZE 512
 
 bool _cncPut(ocrGuid_t item, unsigned char *tag, int tagLength, cncItemCollection_t collection, bool isSingleAssignment);
 bool _cncPutSingleton(ocrGuid_t item, ocrGuid_t collection, bool isSingleAssignment);

@@ -30,7 +30,12 @@ ocrGuid_t *itemTable;
 {% for i in g.concreteItems -%}
 {% if i.key -%}
 CNC_CREATE_ITEM(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * CNC_TABLE_SIZE);
-for (i=0; i<CNC_TABLE_SIZE; i++) itemTable[i] = NULL_GUID;
+for (i=0; i<CNC_TABLE_SIZE; i++) {
+    ocrGuid_t *_ptr;
+    // Add one level of indirection to help with contention
+    CNC_CREATE_ITEM(&itemTable[i], (void**)&_ptr, sizeof(ocrGuid_t));
+    *_ptr = NULL_GUID;
+}
 {% else -%}
 ocrEventCreate(&context->_items.{{i.collName}}, OCR_EVENT_IDEM_T, true);
 {% endif -%}

@@ -1,5 +1,4 @@
 *.pyc
-lib/*
-!lib/getdeps.sh
-.depsOK
+py/*
+!py/bootstrap.sh
 *.o

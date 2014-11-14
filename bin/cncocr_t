@@ -2,7 +2,9 @@
 
 ROOT=${CNCOCR_INSTALL?"Missing CNCOCR_INSTALL environment variable"}
 
-[ -f $ROOT/.depsOK ] || bash $ROOT/lib/getdeps.sh
+[ -f $ROOT/py/.depsOK ] || bash $ROOT/py/bootstrap.sh
 
-PYTHONPATH="$ROOT:$ROOT/lib" python $ROOT/cncocr_translator.py "$@"
+source $ROOT/py/venv/bin/activate
+
+python $ROOT/cncocr_translator.py "$@"
 

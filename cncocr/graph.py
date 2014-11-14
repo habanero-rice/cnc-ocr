@@ -1,7 +1,9 @@
 from itertools import count, ifilter, imap
-from collections import Counter, OrderedDict
 from sys import exit
 from string import strip
+# Compatibility for Python 2.6
+from counter import Counter
+from ordereddict import OrderedDict
 
 
 class CType(object):
@@ -12,7 +14,7 @@ class CType(object):
         self.isPtrType = bool(self.stars)
         self.ptrType = str(self) + ("" if self.isPtrType else "*")
     def __str__(self):
-        return "{} {}".format(self.baseType, self.stars)
+        return "{0} {1}".format(self.baseType, self.stars)
 
 
 class CExpr(object):
@@ -34,7 +36,7 @@ class RangedTC(object):
     def __init__(self, rtc):
         self.start = CExpr(rtc.start)
         self.end = CExpr(rtc.end)
-        self.sizeExpr = "(({})-({}))".format(self.end, self.start)
+        self.sizeExpr = "(({0})-({1}))".format(self.end, self.start)
         self.isRanged = True
 
 
@@ -112,7 +114,7 @@ class StepFunction(object):
         bindingsCounts = Counter(map(getBinding, allItems) + stepTag)
         # Verify that tag bindings are unique
         if len(set(stepTag)) != len(stepTag):
-            exit("Repeated ID in tag for declaration of step `{}`: {}".format(\
+            exit("Repeated ID in tag for declaration of step `{0}`: {1}".format(\
                     stepIO.step.collName, stepTag))
         # Compute binding names (avoiding duplicates)
         bindings = set(bindingsCounts.keys())
@@ -147,13 +149,13 @@ def verifyCollectionDecls(typ, decls):
     nameCounts = Counter([ x.collName for x in decls ])
     repeated = [ name for name, n in nameCounts.iteritems() if n > 1 ]
     if repeated:
-        exit("Repeated {} collection names: {}".format(typ, ", ".join(repeated)))
+        exit("Repeated {0} collection names: {1}".format(typ, ", ".join(repeated)))
 
 
 def verifyEnv(stepFuns):
     for name in [initNameRaw, finalizeNameRaw]:
         if not name in stepFuns:
-            exit("Missing I/O declaration for environment ({}).".format(name))
+            exit("Missing I/O declaration for environment ({0}).".format(name))
 
 
 # TODO - verify item/step instances match with their declarations

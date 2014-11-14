@@ -2,6 +2,9 @@
 {{ util.auto_file_banner() }}
 
 #include "{{g.name}}_internal.h"
+{% if affinitiesEnabled -%}
+#include <extensions/ocr-affinity.h>
+{% endif %}
 {#/****** Item instance data cast ******/-#}
 {%- macro unpack_item(i) -%}
 {%- with item = g.itemDeclarations[i.collName] -%}
@@ -91,6 +94,22 @@ void cncPrescribe_{{stepfun.collName}}({{
     {% else -%}
     u64 *_args = NULL;
     {% endif -%}
+    // affinity
+    // TODO - allow custom distribution
+    {% if affinitiesEnabled and stepfun.tag -%}
+    ocrGuid_t _affinity;
+    {
+        u64 _affinityCount;
+        ocrAffinityCount(AFFINITY_PD, &_affinityCount);
+        ASSERT(_affinityCount >= 1);
+        ocrGuid_t _affinities[_affinityCount];
+        ocrAffinityGet(AFFINITY_PD, &_affinityCount, _affinities);
+        const u64 _i = {{stepfun.tag[0]}} % _affinityCount;
+        _affinity = _affinities[_i];
+    }
+    {%- else -%}
+    const ocrGuid_t _affinity = NULL_GUID;
+    {%- endif %}
     u64 _depc = {{stepfun.inputCountExpr}} + {{ 1 if paramTag else 2 }};
     ocrEdtCreate(&_stepGuid, ctx->_steps.{{stepfun.collName}},
         {% if paramTag -%}
@@ -100,7 +119,7 @@ void cncPrescribe_{{stepfun.collName}}({{
         {% endif -%}
         /*depc=*/_depc, /*depv=*/NULL,
         /*properties=*/EDT_PROP_NONE,
-        /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
+        /*affinity=*/_affinity, /*outEvent=*/NULL);
 
     s32 _edtSlot = 0; MAYBE_UNUSED(_edtSlot);
     ocrAddDependence(ctx->_guids.self, _stepGuid, _edtSlot++, DB_MODE_RO);
