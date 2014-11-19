@@ -62,7 +62,7 @@ $(OCR_AR):
 
 # linking - creating the executable
 $(TARGET): $(OCR_AR) $(OBJS)
-	$(CC) -o $@ $(OBJS) $(OCR_AR $(LDFLAGS))
+	$(CC) -o $@ $(OBJS) $(OCR_AR) $(LDFLAGS)
 
 # delete binaries
 clean:
