@@ -1,11 +1,11 @@
 *
 * Installation Prerequisites
 *
-	- make
-	- gcc
+    - make
+    - gcc
     - curl
-	- Python (2.6 or 2.7)
-	- OCR (0.9)
+    - Python (2.6 or 2.7)
+    - OCR (0.9)
 
 *
 * Setting up the environment
@@ -24,7 +24,7 @@ If you don't have a copy of the xstack repository, you can still mimic this
 directory structure to get the expected behavior. To set the needed environment
 variables, navigate to the CnC-OCR root directory and source setup_env.sh:
 
-	source setup_env.sh
+    source setup_env.sh
 
 This script sets the XSTACK_SRC variable to point to the xstack repository root,
 CNCOCR_INSTALL to point to the CnC-OCR root, and updates the PATH to include
@@ -33,7 +33,7 @@ the CnC-OCR bin directory (which contains the graph translator tool).
 *
 * Running the translator
 *
-	cncocr_t [options] FileName.cnc
+    cncocr_t [options] FileName.cnc
 
 The first time you run the graph translator, it will download and install several Python dependencies, which will be saved in ${CNCOCR_INSTALL}/py for future use.
 

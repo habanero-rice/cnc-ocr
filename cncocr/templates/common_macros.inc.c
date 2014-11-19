@@ -58,7 +58,7 @@
 {% set idx = "_i" ~ loop.index0 -%}
 {% if k.isRanged %}{#/* Range */#}
 s64 {{idx}};
-for ({{idx}} = 0; {{idx}} < {{k.sizeExpr}}; {{idx}}++) {
+for ({{idx}} = {{k.start}}; {{idx}} < {{k.end}}; {{idx}}++) {
 {%- do ranges.append("["~idx~"]") -%}
 {%- else %}{#/* Scalar */#}
 s64 {{idx}} = {{k.expr}};
@@ -79,7 +79,7 @@ s64 {{idx}} = {{k.expr}};
 
 {#/****** For-loop nest for iterating over a multi-dimentional
           item array based on a ranged tag function ******/#}
-{% macro render_io_nest(comment, tag, bindings) %}
+{% macro render_io_nest(comment, tag, bindings, zeroBased=False) %}
 {% set ranges = [] -%}
 {% set args = [] -%}
 {%- for x in tag -%}
@@ -96,7 +96,9 @@ s64 {{idx}} = {{k.expr}};
     s64 {{ranges|join(", ", attribute=0)}};
 {%- for idx, x in ranges -%}
 {% call render_indented(loop.index) %}
-for ({{idx}} = 0; {{idx}} < {{x.sizeExpr}}; {{idx}}++) {
+{% set startVal = 0 if zeroBased else x.start -%}
+{% set endVal = x.sizeExpr if zeroBased else x.end -%}
+for ({{idx}} = {{startVal}}; {{idx}} < {{endVal}}; {{idx}}++) {
 {%- endcall -%}
 {%- endfor -%}
 {% set content = caller(args, ranges|map('first')|list) -%}

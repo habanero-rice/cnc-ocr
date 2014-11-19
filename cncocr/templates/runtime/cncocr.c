@@ -399,7 +399,7 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent) {
     ocrEdtTemplateDestroy(templGuid);
 }
 
-ocrEdtDep_t _cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize) {
+void *_cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize, ocrEdtDep_t *out) {
     u32 i, j, k;
     ///////////////////////////////////////
     // Figure out how much memory we need
@@ -416,11 +416,13 @@ ocrEdtDep_t _cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize) {
     ///////////////////////////////////////
     ocrEdtDep_t block;
     CNC_CREATE_ITEM(&block.guid, &block.ptr, sum);
+    void *dataStart = block.ptr;
     ///////////////////////////////////////
     // Set up the internal pointers
     ///////////////////////////////////////
     if (n > 1) {
         u32 prevDim = 1, currDim = 1, nextDim = dims[0];
+        // Set up the pointers-to-pointers
         void **ptrs = block.ptr;
         void **current = ptrs;
         void **tail = ptrs + nextDim; // make room for first array
@@ -439,6 +441,9 @@ ocrEdtDep_t _cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize) {
                 }
             }
         }
+        // Save start of actual data's memory
+        dataStart = tail;
+        // Set up the pointers-to-data
         u8 **itemCurrent = (u8**)current;
         u8 *itemTail = (u8*)tail;
         // Slide the window
@@ -459,6 +464,7 @@ ocrEdtDep_t _cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize) {
     ///////////////////////////////////////
     // Return the initialized datablock
     ///////////////////////////////////////
-    return block;
+    *out = block;
+    return dataStart;
 }
 

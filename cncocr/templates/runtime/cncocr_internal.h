@@ -28,6 +28,6 @@ bool _cncPutSingleton(ocrGuid_t item, ocrGuid_t collection, bool isSingleAssignm
 void _cncGet(unsigned char *tag, int tagLength, ocrGuid_t destination, u32 slot, ocrDbAccessMode_t mode, cncItemCollection_t collection);
 void _cncGetSingleton(ocrGuid_t destination, u32 slot, ocrDbAccessMode_t mode, ocrGuid_t collection);
 
-ocrEdtDep_t _cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize);
+void *_cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize, ocrEdtDep_t *out);
 
 #endif /*{{defname}}*/

@@ -19,7 +19,7 @@ void {{stepfun.collName}}({{ util.print_tag(stepfun.tag, typed=True)
 {%- set comment = "Access \"" ~ input.binding ~ "\" inputs" -%}
 {%- set decl = g.itemDeclarations[input.collName] -%}
 {%- call util.render_indented(1) -%}
-{%- call(args, ranges) util.render_io_nest(comment, input.key, decl.key) -%}
+{%- call(args, ranges) util.render_io_nest(comment, input.key, decl.key, zeroBased=True) -%}
 {%- set var = input.binding ~ util.print_indices(ranges) -%}
 /* TODO: Do something with {{var}}.item */
 {%- endcall -%}

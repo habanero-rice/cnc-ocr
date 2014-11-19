@@ -36,7 +36,12 @@ class RangedTC(object):
     def __init__(self, rtc):
         self.start = CExpr(rtc.start)
         self.end = CExpr(rtc.end)
-        self.sizeExpr = "(({0})-({1}))".format(self.end, self.start)
+        if str(self.start) == "0":
+            self.sizeExpr = str(self.end)
+        elif str(self.start).isalnum() and str(self.end).isalnum():
+            self.sizeExpr = "({0}-{1})".format(self.end, self.start)
+        else:
+            self.sizeExpr = "({0})-({1})".format(self.end, self.start)
         self.isRanged = True
 
 

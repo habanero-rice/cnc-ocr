@@ -21,7 +21,6 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     {{g.name}}Ctx *ctx = depv[0].ptr;
 
     u64 *_tag = {{ "paramv" if paramTag else "depv[1].ptr" }}; MAYBE_UNUSED(_tag);
-    // {{ paramTag }} ; {{ stepfun.tag }}
     {% for x in stepfun.tag -%}
     const cncTag_t {{x}} = (cncTag_t)_tag[{{loop.index0}}]; MAYBE_UNUSED({{x}});
     {% endfor -%}
@@ -40,14 +39,12 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
         u32 _itemCount = {{input.keyRanges|join("*", attribute='sizeExpr')}};
         u32 _dims[] = { {{input.keyRanges|join(", ", attribute='sizeExpr')}} };
         // XXX - I'd like to use pdMalloc here instead of creating a datablock
-        _block_{{input.binding}} = _cncRangedInputAlloc({{
-                input.keyRanges|count}}, _dims, sizeof({{input.collName}}Item));
-        {{input.binding}} = ({{util.ranged_type(input)}}) _block_{{input.binding}}.ptr;
-        {{input.collName}}Item *_item = {{
-             ("*" * (input.keyRanges|count - 1)) ~ input.binding}};
-        for (_i=0; _i<_itemCount; _i++, _item++) {
-            _item->item = {{unpack_item(input)}}depv[_edtSlot].ptr;
-            _item->handle = depv[_edtSlot++].guid;
+        {{input.collName}}Item *_item = _cncRangedInputAlloc({{ input.keyRanges|count
+                }}, _dims, sizeof({{input.collName}}Item), &_block_{{input.binding}});
+        {{input.binding}} = _block_{{input.binding}}.ptr;
+        for (_i=0; _i<_itemCount; _i++) {
+            _item[_i].item = {{unpack_item(input)}}depv[_edtSlot].ptr;
+            _item[_i].handle = depv[_edtSlot++].guid;
         }
     }
     {% else -%}
