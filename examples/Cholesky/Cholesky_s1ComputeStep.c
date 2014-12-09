@@ -4,14 +4,13 @@
 /*
  * typeof Lkji is double *
  */
-void s1ComputeStep(cncTag_t k, LkjiItem Lkji1D, CholeskyCtx *ctx) {
+void s1ComputeStep(cncTag_t k, double *Lkji1D, CholeskyCtx *ctx) {
 
     int t = ctx->tileSize;
-    double (*Lkji)[t] = (double(*)[t])Lkji1D.item;
+    double (*Lkji)[t] = (double(*)[t])Lkji1D;
 
     // Allocate new tile
-    double *lBlock1D;
-    cncHandle_t lBlock_handle = cncCreateItem_Lkji(&lBlock1D, t*t);
+    double *lBlock1D = cncCreateItem_Lkji(t*t);
     double (*lBlock)[t] = (double(*)[t])lBlock1D;
 
     // Calculate tile values
@@ -29,9 +28,9 @@ void s1ComputeStep(cncTag_t k, LkjiItem Lkji1D, CholeskyCtx *ctx) {
                 Lkji[ iB ][ jBB ] = Lkji[ iB ][ jBB ] - ( lBlock[ iB ][ kB ] * lBlock[ jBB ][ kB ] );
     }
 
-    cncPut_Lkji(lBlock_handle, k, k, k+1, ctx);
+    cncPut_Lkji(lBlock1D, k, k, k+1, ctx);
 
     int tagResult = (k)*(k+1)/2 + k;
-    cncPut_results(lBlock_handle, tagResult, ctx);
+    cncPut_results(lBlock1D, tagResult, ctx);
 
 }

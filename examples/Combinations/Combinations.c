@@ -1,13 +1,14 @@
 #include "Combinations.h"
 
+
 void Combinations_init(CombinationsArgs *args, CombinationsCtx *ctx) {
 
 
-    // Put "top" items
-    u64 *top;
-    cncHandle_t topHandle = cncCreateItem_cells(&top);
-    *top = 1;
-    cncPut_cells(topHandle, 0, 0, ctx);
+    // Put "out" items
+    u64 *out = cncCreateItem_cells();
+    /* TODO: Initialize out */
+    *out = 1;
+    cncPut_cells(out, 0, 0, ctx);
 
     // Prescribe "addToLeftEdge" steps
     cncPrescribe_addToLeftEdge(1, 0, ctx);
@@ -16,7 +17,7 @@ void Combinations_init(CombinationsArgs *args, CombinationsCtx *ctx) {
     cncPrescribe_addToRightEdge(1, 1, ctx);
 
     // Set finalizer function's tag
-    Combinations_await(ctx->n, ctx->k, ctx);
+    Combinations_await(ctx);
 
 }
 
@@ -24,7 +25,10 @@ void Combinations_init(CombinationsArgs *args, CombinationsCtx *ctx) {
 /*
  * typeof cells is u64 
  */
-void Combinations_finalize(cncTag_t n, cncTag_t k, cellsItem totalChoices, CombinationsCtx *ctx) {
-    PRINTF("%lu choose %lu = %lu\n", n, k, totalChoices.item);
+void Combinations_finalize(u64 totalChoices, CombinationsCtx *ctx) {
+
+    /* TODO: Do something with totalChoices.item */
+    PRINTF("%u choose %u = %lu\n", ctx->n, ctx->k, totalChoices);
+
 }
 

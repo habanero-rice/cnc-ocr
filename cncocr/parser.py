@@ -1,13 +1,4 @@
-###########################################################################
-# WARNING!
-# This code monkey-patches the pyparsing module to make string literals
-# convert to Suppress rather than Literal by default.
-###########################################################################
-
 from pyparsing import *
-
-# Suppress string literals (see WARNING above)
-ParserElement.literalStringClass = Suppress
 
 
 ##################################################
@@ -79,29 +70,43 @@ cType = cTypeBase('baseType') + cTypeStars('stars')
 # Context struct fields declaration
 # (used to add custom parameters to the context)
 
-cncContext = CaselessLiteral("$context").suppress() + "{" + cExpr('fields') + "}" + ";"
+cncContext = CaselessLiteral("$context").suppress() + Suppress("{")\
+           + cExpr('fields') + Suppress("}") + Suppress(";")
 
 
 ##################################################
 # SCALAR TAG FUNCTION COMPONENTS
 # (used in tag functions)
 
-scalarExpr = notSpace(OneOrMore(CharsNotIn("()[]{},") | cSubExpr))
-scalarTC = Group(kind('SCALAR') + joined(scalarExpr)('expr'))
+scalarExpr = joined(notSpace(OneOrMore(CharsNotIn("()[]{},") | cSubExpr)))
+scalarTC = Group(kind('SCALAR') + scalarExpr('expr'))
 
 
 ##################################################
 # RANGED TAG FUNCTION COMPONENTS
 # (used in tag functions)
 
+# Old range syntax support
 # Helper parsers for ranges (to avoid parsing the "..")
 singleDotExpr = Regex(r"(\.?[^{}[\].])+")
 rangeSafeExpr = joined(OneOrMore(singleDotExpr | cSubExpr))
 rangeSafeExpr.leaveWhitespace()
 
-rangedTC = Group(kind('RANGED') + "{" + rangeSafeExpr('start') \
-                + ".." + rangeSafeExpr('end') + "}")
+def deprecatedRangeSyntaxWarning(s, loc, tok):
+    lnum = lineno(loc, s)
+    ltxt = line(loc, s)
+    print "WARNING! Using deprecated range syntax on line {0}:"
+    print "\t", ltxt
+    print "\t(Please the $range or $rangeTo function instead.)\n"
 
+oldRangeExpr = "{" + rangeSafeExpr('start') + ".." + rangeSafeExpr('end') + "}"
+oldRangeExpr.addParseAction(deprecatedRangeSyntaxWarning)
+
+# Newer-style range functions
+rangeFn = CaselessLiteral("$rangeTo")('inclusive') | CaselessLiteral("$range")
+rangeExpr = rangeFn + "(" + Optional(scalarExpr('start') + ",") + scalarExpr('end') + ")"
+
+rangedTC = Group(kind('RANGED') + (rangeExpr | oldRangeExpr))
 
 ##################################################
 # TAGS

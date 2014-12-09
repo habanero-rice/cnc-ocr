@@ -22,6 +22,8 @@ extern void *memcpy(void *dest, const void *src, size_t n);
 
 #define CNC_TABLE_SIZE 512
 
+#define SIMPLE_DBCREATE(guid, ptr, sz) ocrDbCreate(guid, ptr, sz, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
+
 bool _cncPut(ocrGuid_t item, unsigned char *tag, int tagLength, cncItemCollection_t collection, bool isSingleAssignment);
 bool _cncPutSingleton(ocrGuid_t item, ocrGuid_t collection, bool isSingleAssignment);
 

@@ -8,11 +8,11 @@ void addToRightEdge(cncTag_t row, cncTag_t col, CombinationsCtx *ctx) {
     // OUTPUTS
     //
 
-    // Put "cells" items
-    u64 *cells;
-    cncHandle_t cellsHandle = cncCreateItem_cells(&cells);
-    *cells = 1;
-    cncPut_cells(cellsHandle, row, col, ctx);
+    // Put "out" items
+    u64 *out = cncCreateItem_cells();
+    /* TODO: Initialize out */
+    *out = 1;
+    cncPut_cells(out, row, col, ctx);
 
     if (row < ctx->n) {
         // Prescribe "addToInside" steps
@@ -21,4 +21,5 @@ void addToRightEdge(cncTag_t row, cncTag_t col, CombinationsCtx *ctx) {
         // Prescribe "addToRightEdge" steps
         cncPrescribe_addToRightEdge(row+1, col+1, ctx);
     }
+
 }

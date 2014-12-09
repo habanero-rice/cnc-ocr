@@ -35,7 +35,7 @@ endif
 
 CC_OPTS := -pthread
 LDFLAGS := -lm $(CC_OPTS)
-CFLAGS := -DOCR_ASSERT -g -O2 -I. -Icncocr_support -I$(OCR_INSTALL)/include -Wall $(CC_OPTS)
+CFLAGS := -DCNC_DEBUG -g -O2 -I. -Icncocr_support -I$(OCR_INSTALL)/include -Wall $(CC_OPTS)
 
 include cncocr_support/{{g.name}}_defs.mk
 CNC_RUNTIME_SRCS := cncocr_support/cncocr.c

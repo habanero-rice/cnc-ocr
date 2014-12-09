@@ -34,14 +34,20 @@ class ScalarTC(object):
 
 class RangedTC(object):
     def __init__(self, rtc):
-        self.start = CExpr(rtc.start)
+        self.start = CExpr(rtc.start or "0")
         self.end = CExpr(rtc.end)
+        self.inclusive = bool(rtc.inclusive)
         if str(self.start) == "0":
             self.sizeExpr = str(self.end)
         elif str(self.start).isalnum() and str(self.end).isalnum():
             self.sizeExpr = "({0}-{1})".format(self.end, self.start)
         else:
             self.sizeExpr = "({0})-({1})".format(self.end, self.start)
+        if self.inclusive:
+            self.sizeExpr += "+1"
+            self.operator = '<='
+        else:
+            self.operator = '<'
         self.isRanged = True
 
 
@@ -188,4 +194,7 @@ class CnCGraph(object):
         self.finalAndSteps = [self.finalizeFunction] + self.stepFunctions.values()
         # context
         self.ctxParams = filter(bool, map(strip, g.ctx.splitlines())) if g.ctx else []
+
+    def lookupType(self, item):
+        return self.itemDeclarations[item.collName].type
 

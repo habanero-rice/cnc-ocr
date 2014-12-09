@@ -44,7 +44,7 @@
 // graph init function's args struct.
 ( $init: () )
  -> [ naturals: $range(0, @n) ],
-    ( sumEvens: ((@n/2)) + (((@n%2))) ),
+    ( sumEvens: @n/2 + @n%2 ),
     ( sumOdds:  @n/2 ); 
 
 ( sumEvens: n ) <- [ evens: $range(0, n) ] -> [ evensTotal: () ];

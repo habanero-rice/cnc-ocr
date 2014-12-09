@@ -55,7 +55,7 @@ static ocrGuid_t _itemBlockCreate(u32 tagLength, ocrGuid_t next, ItemBlock **out
     ocrGuid_t blockGuid;
     ItemBlock *block;
     u64 size = sizeof(ItemBlock) + (tagLength * CNC_ITEMS_PER_BLOCK);
-    CNC_CREATE_ITEM(&blockGuid, (void**)&block, size);
+    SIMPLE_DBCREATE(&blockGuid, (void**)&block, size);
     // XXX - should we start from the back?
     block->count = 0;
     block->next = next;
@@ -145,7 +145,7 @@ static ocrGuid_t _addToBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
             ocrAddDependence(res, params->entry, params->slot, params->mode);
         }
         // DONE! clean up.
-        CNC_DESTROY_ITEM(paramsGuid);
+        ocrDbDestroy(paramsGuid);
     }
     else { // someone added a new block...
         // try searching again
@@ -183,7 +183,7 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
         }
         // XXX - currently ignoring single assignment checks
         // DONE! clean up.
-        CNC_DESTROY_ITEM(paramsGuid);
+        ocrDbDestroy(paramsGuid);
     }
     // add the entry if there's still room
     else if (!CNC_ITEM_BLOCK_FULL(block)) {
@@ -194,7 +194,7 @@ static ocrGuid_t _addToBlockEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t 
             ocrAddDependence(res, params->entry, params->slot, params->mode);
         }
         // DONE! clean up.
-        CNC_DESTROY_ITEM(paramsGuid);
+        ocrDbDestroy(paramsGuid);
     }
     else { // the block filled up while we were searching
         // might need to add a new block to the bucket
@@ -235,7 +235,7 @@ static ocrGuid_t _searchBucketEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_
         }
         // XXX - currently ignoring single assignment checks
         // DONE! clean up.
-        CNC_DESTROY_ITEM(paramsGuid);
+        ocrDbDestroy(paramsGuid);
     }
     // did we reach the end of the search?
     else if (block->next == NULL_GUID || blockGuid == params->oldFirstBlock) {
@@ -330,7 +330,7 @@ static void _itemCollUpdate(ocrGuid_t coll, u8 *tag, u32 tagLength, u8 role, ocr
     // Build datablock to hold search parameters
     ocrGuid_t paramsGuid;
     ItemCollOpParams *params;
-    CNC_CREATE_ITEM(&paramsGuid, (void**)&params, sizeof(ItemCollOpParams)+tagLength);
+    SIMPLE_DBCREATE(&paramsGuid, (void**)&params, sizeof(ItemCollOpParams)+tagLength);
     params->entry = entry;
     params->tagLength = tagLength;
     params->role = role;
@@ -415,7 +415,7 @@ void *_cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize, ocrEdtDep_t *out)
     // Allocate a datablock
     ///////////////////////////////////////
     ocrEdtDep_t block;
-    CNC_CREATE_ITEM(&block.guid, &block.ptr, sum);
+    SIMPLE_DBCREATE(&block.guid, &block.ptr, sum);
     void *dataStart = block.ptr;
     ///////////////////////////////////////
     // Set up the internal pointers
@@ -468,3 +468,30 @@ void *_cncRangedInputAlloc(u32 n, u32 dims[], size_t itemSize, ocrEdtDep_t *out)
     return dataStart;
 }
 
+void *cncMalloc(size_t count) {
+    ocrGuid_t handle;
+    void *data;
+    // add space for our meta-data
+    count += _CNC_ITEM_META_SIZE;
+    // allocate datablock
+    // XXX - do I need to check for busy (and do a retry)?
+    ocrDbCreate(&handle, &data, count, DB_PROP_NONE, NULL_GUID, NO_ALLOC);
+    ASSERT(data && "ERROR: out of memory");
+    // store guid
+    *(ocrGuid_t*)data = handle;
+    // set cookie
+    #ifdef CNC_DEBUG
+    u8 *bytes = data;
+    u64 *cookie = (u64*)&bytes[sizeof(ocrGuid_t)];
+    *cookie = _CNC_ITEM_COOKIE;
+    #endif
+    // return offset user pointer
+    return _cncItemDataPtr(data);
+}
+
+void cncFree(void *itemPtr) {
+    if (itemPtr) {
+        _cncItemCheckCookie(itemPtr);
+        ocrDbDestroy(_cncItemGuid(itemPtr));
+    }
+}

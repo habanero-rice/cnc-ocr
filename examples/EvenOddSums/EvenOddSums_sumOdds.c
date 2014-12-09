@@ -1,9 +1,9 @@
 #include "EvenOddSums.h"
 
-/*
- * typeof odds is int 
+/**
+ * Step function defintion for "sumOdds"
  */
-void sumOdds(cncTag_t n, oddsItem *odds, EvenOddSumsCtx *ctx) {
+void sumOdds(cncTag_t n, int *odds, EvenOddSumsCtx *ctx) {
 
     //
     // INPUTS
@@ -12,8 +12,8 @@ void sumOdds(cncTag_t n, oddsItem *odds, EvenOddSumsCtx *ctx) {
     int sum = 0;
     { // Access "odds" inputs
         s64 _i;
-        for (_i = 0; _i < ((n)-(0)); _i++) {
-            sum += odds[_i].item;
+        for (_i = 0; _i < n; _i++) {
+            sum += odds[_i];
         }
     }
 
@@ -23,10 +23,9 @@ void sumOdds(cncTag_t n, oddsItem *odds, EvenOddSumsCtx *ctx) {
     //
 
     // Put "oddsTotal" items
-    int *oddsTotal;
-    cncHandle_t oddsTotalHandle = cncCreateItem_oddsTotal(&oddsTotal);
+    int *oddsTotal = cncCreateItem_oddsTotal();
     *oddsTotal = sum;
-    cncPut_oddsTotal(oddsTotalHandle, ctx);
+    cncPut_oddsTotal(oddsTotal, ctx);
 
 
 }

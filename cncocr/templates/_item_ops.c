@@ -6,39 +6,37 @@
 {% for i in g.itemDeclarations.values() %}
 /* {{i.collName}} */
 
-cncHandle_t cncCreateItemSized_{{i.collName}}({{i.type.ptrType}}*item, size_t size) {
-    cncHandle_t handle;
-    // XXX - do I need to check for busy (and do a retry)?
-    CNC_CREATE_ITEM(&handle, (void**)item, size);
-    return handle;
+{{ i.type.ptrType }}cncCreateItemSized_{{i.collName}}(size_t size) {
+    return cncMalloc(size);
 }
 
-void cncPutChecked_{{i.collName}}(cncHandle_t handle, {{
+void cncPutChecked_{{i.collName}}({{i.type.ptrType}}_item, {{
         util.print_tag(i.key, typed=True)
-        }}bool checkSingleAssignment, {{g.name}}Ctx *ctx) {
+        }}bool _checkSingleAssignment, {{g.name}}Ctx *ctx) {
     {% if not i.isVirtual -%}
     {#/*****NON-VIRTUAL*****/-#}
+    ocrGuid_t _handle = _cncItemGuid(_item);
     {{ util.log_msg("PUT", i.collName, i.key) }}
     {% if i.key -%}
-    cncTag_t tag[] = { {{i.key|join(", ")}} };
-    _cncPut(handle, (unsigned char*)tag, sizeof(tag), ctx->_items.{{i.collName}}, checkSingleAssignment);
+    cncTag_t _tag[] = { {{i.key|join(", ")}} };
+    _cncPut(_handle, (unsigned char*)_tag, sizeof(_tag), ctx->_items.{{i.collName}}, _checkSingleAssignment);
     {%- else -%}
-    _cncPutSingleton(handle, ctx->_items.{{i.collName}}, checkSingleAssignment);
+    _cncPutSingleton(_handle, ctx->_items.{{i.collName}}, _checkSingleAssignment);
     {%- endif %}
     {%- else -%}
     {% set targetColl = g.itemDeclarations[i.mapTarget] -%}
     {% if i.isInline -%}
     {#/*****INLINE VIRTUAL*****/-#}
-    cncPutChecked_{{i.mapTarget}}(handle, {{
+    cncPutChecked_{{i.mapTarget}}(_item, {{
         util.print_tag(i.keyFunction)
-        }}checkSingleAssignment, ctx);
+        }}_checkSingleAssignment, ctx);
     {%- else -%}
     {#/*****EXTERN VIRTUAL******/-#}
     {{i.mapTarget}}ItemKey _key = {{i.functionName}}({{
         util.print_tag(i.key) }}ctx);
-    cncPutChecked_{{i.mapTarget}}(handle, {{
+    cncPutChecked_{{i.mapTarget}}(_item, {{
         util.print_tag(targetColl.key, prefix="_key.")
-        }}checkSingleAssignment, ctx);
+        }}_checkSingleAssignment, ctx);
     {%- endif %}
     {%- endif %}
 }

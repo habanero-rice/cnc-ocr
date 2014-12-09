@@ -17,8 +17,8 @@ void SimpleGraph_init(SimpleGraphArgs *args, SimpleGraphCtx *ctx) {
  * typeof X is int 
  * typeof Y is int 
  */
-void SimpleGraph_finalize(XItem X, YItem Y, SimpleGraphCtx *ctx) {
+void SimpleGraph_finalize(int X, int Y, SimpleGraphCtx *ctx) {
     // Print results
-    PRINTF("X = %d\n", X.item);
-    PRINTF("Y = %d\n", Y.item);
+    PRINTF("X = %d\n", X);
+    PRINTF("Y = %d\n", Y);
 }

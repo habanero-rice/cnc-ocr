@@ -1,9 +1,9 @@
 #include "EvenOddSums.h"
 
-/*
- * typeof evens is int 
+/**
+ * Step function defintion for "sumEvens"
  */
-void sumEvens(cncTag_t n, evensItem *evens, EvenOddSumsCtx *ctx) {
+void sumEvens(cncTag_t n, int *evens, EvenOddSumsCtx *ctx) {
 
     //
     // INPUTS
@@ -12,8 +12,8 @@ void sumEvens(cncTag_t n, evensItem *evens, EvenOddSumsCtx *ctx) {
     int sum = 0;
     { // Access "evens" inputs
         s64 _i;
-        for (_i = 0; _i < ((n)-(0)); _i++) {
-            sum += evens[_i].item;
+        for (_i = 0; _i < n; _i++) {
+            sum += evens[_i];
         }
     }
 
@@ -23,10 +23,9 @@ void sumEvens(cncTag_t n, evensItem *evens, EvenOddSumsCtx *ctx) {
     //
 
     // Put "evensTotal" items
-    int *evensTotal;
-    cncHandle_t evensTotalHandle = cncCreateItem_evensTotal(&evensTotal);
+    int *evensTotal = cncCreateItem_evensTotal();
     *evensTotal = sum;
-    cncPut_evensTotal(evensTotalHandle, ctx);
+    cncPut_evensTotal(evensTotal, ctx);
 
 
 }

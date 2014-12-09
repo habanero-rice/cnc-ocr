@@ -60,7 +60,7 @@ run:
 
 print:
 	@echo '>>> Application console output:'
-	@cat install/$(OCR_TYPE)/logs/ocr-*.log.*.CE.00 | sed -n 's/CONSOLE.*>>> //p'
+	@cat install/$(OCR_TYPE)/console.out
 
 clean:
 	@$(MAKE) -f makefiles/Makefile.$(OCR_TYPE) $@

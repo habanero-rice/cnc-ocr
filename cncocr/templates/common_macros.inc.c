@@ -30,14 +30,15 @@
 
 {#/****** Print ranged type for item collection ******/#}
 {% macro ranged_type(item) -%}
-{{item.collName}}Item {{"*" * item.keyRanges|count}}
+{{ g.lookupType(item)
+ }}{{ ("*" * item.keyRanges|count) }}
 {%- endmacro %}
 
 {#/****** Print bindings for a list of items ******/#}
 {% macro print_bindings(items, typed=False) -%}
 {% for i in items %}
 {%- if typed %}{{ ranged_type(i) }}{% endif -%}
-{{i.binding}}, {% endfor -%}
+{{ i.binding}}, {% endfor -%}
 {%- endmacro %}
 
 {#/****** Print indices for an array access ******/#}
@@ -58,7 +59,7 @@
 {% set idx = "_i" ~ loop.index0 -%}
 {% if k.isRanged %}{#/* Range */#}
 s64 {{idx}};
-for ({{idx}} = {{k.start}}; {{idx}} < {{k.end}}; {{idx}}++) {
+for ({{idx}} = {{k.start}}; {{idx}} {{k.operator}} {{k.end}}; {{idx}}++) {
 {%- do ranges.append("["~idx~"]") -%}
 {%- else %}{#/* Scalar */#}
 s64 {{idx}} = {{k.expr}};
@@ -98,7 +99,7 @@ s64 {{idx}} = {{k.expr}};
 {% call render_indented(loop.index) %}
 {% set startVal = 0 if zeroBased else x.start -%}
 {% set endVal = x.sizeExpr if zeroBased else x.end -%}
-for ({{idx}} = {{startVal}}; {{idx}} < {{endVal}}; {{idx}}++) {
+for ({{idx}} = {{startVal}}; {{idx}} {{x.operator}} {{endVal}}; {{idx}}++) {
 {%- endcall -%}
 {%- endfor -%}
 {% set content = caller(args, ranges|map('first')|list) -%}

@@ -15,7 +15,7 @@
     // allocate the context datablock
     ocrGuid_t contextGuid;
     {{g.name}}Ctx *context;
-    CNC_CREATE_ITEM(&contextGuid, (void**)&context, sizeof(*context));
+    SIMPLE_DBCREATE(&contextGuid, (void**)&context, sizeof(*context));
     // store a copy of its guid inside
     context->_guids.self = contextGuid;
     // initialize graph events
@@ -29,11 +29,11 @@ s32 i;
 ocrGuid_t *itemTable;
 {% for i in g.concreteItems -%}
 {% if i.key -%}
-CNC_CREATE_ITEM(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * CNC_TABLE_SIZE);
+SIMPLE_DBCREATE(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * CNC_TABLE_SIZE);
 for (i=0; i<CNC_TABLE_SIZE; i++) {
     ocrGuid_t *_ptr;
     // Add one level of indirection to help with contention
-    CNC_CREATE_ITEM(&itemTable[i], (void**)&_ptr, sizeof(ocrGuid_t));
+    SIMPLE_DBCREATE(&itemTable[i], (void**)&_ptr, sizeof(ocrGuid_t));
     *_ptr = NULL_GUID;
 }
 {% else -%}
@@ -59,7 +59,7 @@ void {{g.name}}_destroy({{g.name}}Ctx *context) {
 {% block arch_itemcoll_destroy -%}
 {% for i in g.concereteItems -%}
 {% if i.key -%}
-CNC_DESTROY_ITEM(context->_items.{{i.collName}});
+ocrDbDestroy(context->_items.{{i.collName}});
 {% else -%}
 ocrEventDestroy(context->_items.{{i.collName}});
 {% endif -%}
@@ -94,7 +94,7 @@ static ocrGuid_t _graphFinishEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
     ocrEdtTemplateDestroy(templGuid);
     // Start graph execution
     {{g.name}}_init(args, context);
-    ocrDbDestroy(depv[0].guid);
+    if (args) ocrDbDestroy(depv[0].guid);
     return NULL_GUID;
 }
 
@@ -105,7 +105,7 @@ static ocrGuid_t _finalizerEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t d
         {%- for x in g.finalizeFunction.tag %}tag[{{loop.index0}}], {% endfor -%}
         context);
     // XXX - for some reason this causes a segfault?
-    //CNC_DESTROY_ITEM(depv[1].guid);
+    //ocrDbDestroy(depv[1].guid);
     return NULL_GUID;
 }
 
@@ -114,8 +114,14 @@ void {{g.name}}_launch({{g.name}}Args *args, {{g.name}}Ctx *context) {
     ocrGuid_t graphEdtGuid, finalEdtGuid, edtTemplateGuid, outEventGuid, argsDbGuid;
     // copy the args struct into a data block
     // TODO - I probably need to free this sometime
-    CNC_CREATE_ITEM(&argsDbGuid, (void**)&argsCopy, sizeof(*args));
-    *argsCopy = *args;
+    if (sizeof(*args) > 0) {
+        SIMPLE_DBCREATE(&argsDbGuid, (void**)&argsCopy, sizeof(*args));
+        *argsCopy = *args;
+    }
+    // Don't need to copy empty args structs
+    else {
+        argsDbGuid = NULL_GUID;
+    }
     // create a finish EDT for the CnC graph
     ocrEdtTemplateCreate(&edtTemplateGuid, _graphFinishEdt, 0, 2);
     ocrEdtCreate(&graphEdtGuid, edtTemplateGuid,
@@ -149,7 +155,7 @@ void {{g.name}}_await({{
     cncTag_t *_tagPtr;
     ocrGuid_t _tagGuid;
     int _i = 0;
-    CNC_CREATE_ITEM(&_tagGuid, (void**)&_tagPtr, sizeof(cncTag_t) * {{ g.finalizeFunction.tag|count}});
+    SIMPLE_DBCREATE(&_tagGuid, (void**)&_tagPtr, sizeof(cncTag_t) * {{ g.finalizeFunction.tag|count}});
     {% for x in g.finalizeFunction.tag -%}
     _tagPtr[_i++] = {{x}};
     {% endfor -%}

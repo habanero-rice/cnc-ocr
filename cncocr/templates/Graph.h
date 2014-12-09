@@ -22,7 +22,7 @@ typedef struct {{g.name}}Context {
     } _guids;
     struct {
         {%- for i in g.concreteItems %}
-        {{ ("cncItemCollection_t " if i.key else "cncHandle_t ") ~ i.collName }};
+        {{ "cncItemCollection_t" if i.key else "ocrGuid_t" }} {{i.collName}};
         {%- endfor %}
     } _items;
     struct {
@@ -43,13 +43,6 @@ void {{g.name}}_await({{
         util.print_tag(g.finalizeFunction.tag, typed=True)
         }}{{g.name}}Ctx *context);
 
-/****************************\
- ******** ITEM TYPES ********
-\****************************/
-
-{% for name, i in g.itemDeclarations.items() -%}
-typedef struct { {{i.type}}item; cncHandle_t handle; } {{name}}Item;
-{% endfor %}
 /**********************************\
  ******** ITEM KEY STRUCTS ********
 \**********************************/
@@ -72,14 +65,16 @@ typedef struct { cncTag_t {{ i.key|join(", ") }}; } {{name}}ItemKey;
  ******** ITEM CREATE ********
 \*****************************/
 {% for name, i in g.itemDeclarations.items() %}
-cncHandle_t cncCreateItemSized_{{name}}({{i.type.ptrType}}*item, size_t size);
+{{i.type.ptrType}}cncCreateItemSized_{{name}}(size_t size);
 {% if i.type.isPtrType -%}
 {# /* TODO - ADD NAMESPACE PREFIX DEFINE THING */ -#}
-#define cncCreateItem_{{name}}(ptrptr, count) \
-   cncCreateItemSized_{{name}}(ptrptr, sizeof(**(ptrptr)) * (count))
+static inline {{i.type.ptrType}}cncCreateItem_{{name}}(size_t count) {
+    return cncCreateItemSized_{{name}}(sizeof({{i.type.baseType}}) * count);
+}
 {% else -%}
-#define cncCreateItem_{{name}}(ptrptr) \
-   cncCreateItemSized_{{name}}(ptrptr, sizeof(**(ptrptr)))
+static inline {{i.type.ptrType}}cncCreateItem_{{name}}() {
+    return cncCreateItemSized_{{name}}(sizeof({{i.type.baseType}}));
+}
 {% endif -%}
 {% endfor %}
 /**************************\
@@ -87,11 +82,17 @@ cncHandle_t cncCreateItemSized_{{name}}({{i.type.ptrType}}*item, size_t size);
 \**************************/
 {% for name, i in g.itemDeclarations.items() %}
 {# /* TODO - ADD NAMESPACE PREFIX DEFINE THING */ -#}
-void cncPutChecked_{{name}}(cncHandle_t handle, {{
+// {{i.collName}}
+
+void cncPutChecked_{{name}}({{i.type.ptrType}}_item, {{
         util.print_tag(i.key, typed=True)
-        }}bool checkSingleAssignment, {{g.name}}Ctx *context);
-#define cncPut_{{name}}(handle, {{ util.print_tag(i.key) }}context) \
- cncPutChecked_{{name}}(handle, {{ util.print_tag(i.key) }}true, context)
+        }}bool checkSingleAssignment, {{g.name}}Ctx *ctx);
+
+static inline void cncPut_{{name}}({{i.type.ptrType}}_item, {{
+        util.print_tag(i.key, typed=True)
+        }}{{g.name}}Ctx *ctx) {
+    cncPutChecked_{{name}}(_item, {{ util.print_tag(i.key) }}true, ctx);
+}
 {% endfor %}
 /************************************\
  ******** STEP PRESCRIPTIONS ********

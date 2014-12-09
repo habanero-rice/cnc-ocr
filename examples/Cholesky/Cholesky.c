@@ -12,9 +12,7 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
     CNC_REQUIRE(f != NULL, "Cannot find file: %s\n", args->inFile);
 
     // Allocate memory for reading the whole temporary matrix
-    cncHandle_t a_handle;
-    double *A1D;
-    CNC_CREATE_ITEM(&a_handle, (void**)&A1D, matrixElementCount * sizeof(double)) ;
+    double *A1D = cncMalloc(matrixElementCount * sizeof(double));
 
     // Read the matrix
     for (i=0; i<matrixElementCount; i++) {
@@ -30,8 +28,7 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
     for (i = 0; i < nt; i++){
         for (j = 0 ; j <= i ; j++ ) {
             int A_i, A_j, T_i, T_j;
-            double *temp1D;
-            cncHandle_t tile_handle = cncCreateItem_Lkji(&temp1D, t*t);
+            double *temp1D = cncCreateItem_Lkji(t*t);
             // The 1D array of tile entries maps to a
             // 2D array corresponding to a t-by-t matrix tile
             double (*temp)[t] = (double(*)[t])temp1D;
@@ -42,21 +39,20 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
                 }
             }
             // Put the initialized tile
-            cncPut_Lkji(tile_handle, i, j, 0, ctx);
+            cncPut_Lkji(temp1D, i, j, 0, ctx);
         }
     }
     // Free temporary matrix (no longer needed)
-    CNC_DESTROY_ITEM(a_handle);
+    cncFree(A1D);
 
     // Record starting time
 #if CNCOCR_x86
-    struct timeval *startTime;
-    cncHandle_t startTime_handle = cncCreateItem_startTime(&startTime, 1);
+    struct timeval *startTime = cncCreateItem_startTime(1);
     gettimeofday(startTime, 0);
 #else
-    cncHandle_t startTime_handle = CNC_NULL_HANDLE;
+    struct timeval *startTime = NULL;
 #endif
-    cncPut_startTime(startTime_handle, ctx);
+    cncPut_startTime(startTime, ctx);
 
     // Prescribe "kComputeStep" steps
     cncPrescribe_kComputeStep(ctx);
@@ -70,13 +66,13 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
 /*
  * typeof results is double *
  */
-void Cholesky_finalize(cncTag_t tileCount, startTimeItem startTime, resultsItem *results, CholeskyCtx *ctx) {
+void Cholesky_finalize(cncTag_t tileCount, struct timeval *startTime, double **results, CholeskyCtx *ctx) {
 #if CNCOCR_x86
     // Report the total running time
     struct timeval endTime;
     gettimeofday(&endTime, 0);
-    double secondsRun = endTime.tv_sec - startTime.item->tv_sec;
-    secondsRun += (endTime.tv_usec - startTime.item->tv_usec) / 1000000.0;
+    double secondsRun = endTime.tv_sec - startTime->tv_sec;
+    secondsRun += (endTime.tv_usec - startTime->tv_usec) / 1000000.0;
     PRINTF("The computation took %f seconds\n", secondsRun);
 #endif
     // Print the result matrix row-by-row (requires visiting each tile t times)
@@ -90,7 +86,7 @@ void Cholesky_finalize(cncTag_t tileCount, startTimeItem startTime, resultsItem 
             for (tileCol = 0; tileCol <= tileRow; tileCol++) {
                 int tileIndex = tileIndexRowBase + tileCol;
                 // the item is actually an array of dim t-by-t
-                double (*local_tile)[t] = (double(*)[t])results[tileIndex].item;
+                double (*local_tile)[t] = (double(*)[t])results[tileIndex];
                 // check for tiles on the diagonal (which are half empty)
                 int bound = (tileRow == tileCol) ? entryRow+1 : t;
                 // print current row of current tile

@@ -24,8 +24,9 @@ typedef struct {
 } SeqData;
 
 typedef struct SmithWatermanArguments {
-    s32 tw, th, ntw, nth;
-    cncHandle_t dataHandle;
+    s32 tw, th;
+    char inpath1[256];
+    char inpath2[256];
 } SmithWatermanArgs;
 
 #endif /*_CNCOCR_SMITHWATERMAN_TYPES_H_*/

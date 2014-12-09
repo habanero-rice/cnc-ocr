@@ -27,16 +27,16 @@ $context {
 
 // The kComputeStep produces 'k' loop indices (in the form of tag instance )
 ( kComputeStep: () )
- -> ( kjComputeStep: { 0 .. #numTiles } ),
-    ( s1ComputeStep: { 0 .. #numTiles } );
+ -> ( kjComputeStep: $range(0, #numTiles) ),
+    ( s1ComputeStep: $range(0, #numTiles) );
 
 // The kjCompute step produces 'j' loop indices (in the form of tag instance )
 ( kjComputeStep: k )
- -> ( kjiComputeStep: k, { k+1 .. #numTiles } ),
-    ( s2ComputeStep:  k, { k+1 .. #numTiles } );
+ -> ( kjiComputeStep: k, $range(k+1, #numTiles) ),
+    ( s2ComputeStep:  k, $range(k+1, #numTiles) );
 
 // The kjiComputeStep produces 'i' loop indices (in the form of tag instance )
-( kjiComputeStep: k, j ) -> ( s3ComputeStep: k, j, { k+1 .. j+1 } );
+( kjiComputeStep: k, j ) -> ( s3ComputeStep: k, j, $range(k+1, j+1) );
 
 // Step 1 Executions
 ( s1ComputeStep: k )
@@ -66,7 +66,7 @@ $context {
 //       numTiles is the number of tiles in the first column of the matrix.
 ( $finalize: tileCount )
  <- [ startTime: () ],
-    [ results: { 0 .. tileCount } ];
+    [ results: $range(0, tileCount) ];
 
 // NOTE:
 // j = matrix tile's row

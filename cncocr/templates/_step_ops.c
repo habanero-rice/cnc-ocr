@@ -25,7 +25,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     const cncTag_t {{x}} = (cncTag_t)_tag[{{loop.index0}}]; MAYBE_UNUSED({{x}});
     {% endfor -%}
     {% if not paramTag -%}
-    CNC_DESTROY_ITEM(depv[1].guid); // free tag component datablock
+    ocrDbDestroy(depv[1].guid); // free tag component datablock
     {% endif %}
     s32 _edtSlot = {{ 1 if paramTag else 2 }}; MAYBE_UNUSED(_edtSlot);
     {#-/****** Set up input items *****/#}
@@ -39,18 +39,16 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
         u32 _itemCount = {{input.keyRanges|join("*", attribute='sizeExpr')}};
         u32 _dims[] = { {{input.keyRanges|join(", ", attribute='sizeExpr')}} };
         // XXX - I'd like to use pdMalloc here instead of creating a datablock
-        {{input.collName}}Item *_item = _cncRangedInputAlloc({{ input.keyRanges|count
-                }}, _dims, sizeof({{input.collName}}Item), &_block_{{input.binding}});
+        {{ g.lookupType(input).ptrType }}_item = _cncRangedInputAlloc({{ input.keyRanges|count
+                }}, _dims, sizeof({{ g.lookupType(input) }}), &_block_{{input.binding}});
         {{input.binding}} = _block_{{input.binding}}.ptr;
         for (_i=0; _i<_itemCount; _i++) {
-            _item[_i].item = {{unpack_item(input)}}depv[_edtSlot].ptr;
-            _item[_i].handle = depv[_edtSlot++].guid;
+            _item[_i] = {{unpack_item(input)}}_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
     {% else -%}
     {#/*SCALAR*/-#}
-    {{input.binding}}.item = {{unpack_item(input)}}depv[_edtSlot].ptr;
-    {{input.binding}}.handle = depv[_edtSlot++].guid;
+    {{input.binding}} = {{unpack_item(input)}}_cncItemDataPtr(depv[_edtSlot++].ptr);
     {% endif -%}
     {% endfor %}
     // Call user-defined step function
@@ -63,7 +61,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     // Clean up
     {% for input in stepfun.inputs -%}
     {% if input.keyRanges -%}
-    CNC_DESTROY_ITEM(_block_{{input.binding}}.guid);
+    ocrDbDestroy(_block_{{input.binding}}.guid);
     {% endif -%}
     {% endfor -%}
     {{ util.log_msg("DONE", stepfun.collName, stepfun.tag) }}
@@ -85,7 +83,7 @@ void cncPrescribe_{{stepfun.collName}}({{
     {% if not paramTag -%}
     ocrGuid_t _tagBlockGuid;
     u64 *_tagBlockPtr;
-    CNC_CREATE_ITEM(&_tagBlockGuid, (void**)&_tagBlockPtr, sizeof(_args));
+    SIMPLE_DBCREATE(&_tagBlockGuid, (void**)&_tagBlockPtr, sizeof(_args));
     hal_memCopy(_tagBlockPtr, _args, sizeof(_args), 0);
     {% endif -%}
     {% else -%}

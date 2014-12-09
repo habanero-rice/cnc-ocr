@@ -5,6 +5,10 @@
 #ifndef {{defname}}
 #define {{defname}}
 
+#ifdef CNC_DEBUG
+#define OCR_ASSERT
+#endif
+
 #include "ocr.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,13 +24,19 @@
 #    warning UNKNOWN PLATFORM (possibly unsupported)
 #endif
 
+// XXX - OCR assert bug workaround
+#if defined(CNC_DEBUG) && CNCOCR_x86
+#undef ASSERT
+#define ASSERT(x) assert(x)
+#include <assert.h>
+#endif
+
 {% block arch_includes %}{% endblock arch_includes %}
 /********************************\
 ******** CNC TYPE ALIASES ********
 \********************************/
 
 typedef s64 cncTag_t; // tag components
-typedef ocrGuid_t cncHandle_t; // handles
 {% block arch_typedefs -%}
 typedef ocrGuid_t cncItemCollection_t; // item collections
 {% endblock arch_typedefs %}
@@ -51,12 +61,6 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 #define CNC_REQUIRE(cond, ...) do { if (!(cond)) { PRINTF(__VA_ARGS__); ocrShutdown(); } } while (0)
 #endif
 
-#define CNC_DESTROY_ITEM(handle) ocrDbDestroy(handle) /* free datablock backing an item */
-
-#define CNC_CREATE_ITEM(handle, ptr, size) ocrDbCreate(handle, ptr, size, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
-
-#define CNC_NULL_HANDLE NULL_GUID
-
 /* squelch "unused variable" warnings */
 #define MAYBE_UNUSED(x) ((void)x)
 
@@ -68,14 +72,52 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 
 #define CNC_SHUTDOWN_ON_FINISH(ctx) cncAutomaticShutdown((ctx)->_guids.doneEvent)
 
-/*****************************************\
-********* CNC COMPATIBILITY MACROS ********
-\*****************************************/
+/************************************************\
+********* CNC ITEM MANAGEMENT FUNCTIONS *********
+\************************************************/
+// Cookie value for sanity-checking CnC items
+// (before trying to extract the GUID)
+static const u64 _CNC_ITEM_COOKIE = 0xC17C0C12;
+
+// How much space do we need to store meta-data for CnC items?
+#ifdef CNC_DEBUG
+static const u64 _CNC_ITEM_META_SIZE = sizeof(ocrGuid_t) + sizeof(u64);
+#else
+static const u64 _CNC_ITEM_META_SIZE = sizeof(ocrGuid_t);
+#endif
+
+static inline void _cncItemCheckCookie(void *item) {
+    #ifdef CNC_DEBUG
+    if (item) {
+        u64 *data = item;
+        ASSERT(data[-1] == _CNC_ITEM_COOKIE && "Not a valid CnC item");
+    }
+    #endif
+}
+
+static inline ocrGuid_t _cncItemGuid(void *item) {
+    if (!item) return NULL_GUID;
+    u8 *data = item;
+    return *(ocrGuid_t*)&data[-_CNC_ITEM_META_SIZE];
+}
+
+static inline void *_cncItemDataPtr(void *item) {
+    if (!item) return NULL;
+    u8 *data = item;
+    return &data[_CNC_ITEM_META_SIZE];
+}
+
+
+/********************************************\
+********* CNC COMPATIBILITY FUNCTIONS ********
+\********************************************/
 {% block arch_compat_macros %}
 // XXX - re-enalbe these when we get pdMalloc from OCR
 //#define MALLOC pdMalloc
 //#define FREE   pdFree
 {% endblock arch_compat_macros %}
+void *cncMalloc(size_t count);
+void cncFree(void *itemPtr);
 
 {% if logEnabled %}
 /**********************************\

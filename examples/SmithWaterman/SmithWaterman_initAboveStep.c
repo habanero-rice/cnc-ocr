@@ -1,16 +1,16 @@
 #include "SmithWaterman.h"
 
-/*
+/**
+ * Step function defintion for "initAboveStep"
  */
 void initAboveStep(cncTag_t tw, cncTag_t ntw, SmithWatermanCtx *ctx) {
     s64 j, jj;
     for (j = 0; j < ntw; j++) {
-        int *above;
-        cncHandle_t aboveHandle = cncCreateItem_above(&above, tw+1);
+        int *above = cncCreateItem_above(tw+1);
         for (jj=0; jj <= tw; jj++) {
-            // TODO - Why isn't this just 0?
+            // XXX - Why isn't this just 0?
             above[jj] = GAP_PENALTY*(j*tw+jj);
         }
-        cncPut_above(aboveHandle, 0, j, ctx);
+        cncPut_above(above, 0, j, ctx);
     }
 }

@@ -23,7 +23,7 @@ $context {
 // down the left-hand edge of the triangle. No input needed
 // since all of the edge entries are just 1.
 ( addToLeftEdge:     row,   col )
- -> [ cells:         row,   col ],
+ -> [ out @ cells:   row,   col ],
     ( addToLeftEdge: row+1, col );
 
 // Step collection for generating the all of the cells
@@ -32,7 +32,7 @@ $context {
 // Note that this step expands the right-hand edge by
 // prescribing two steps instead of just one.
 ( addToRightEdge:     row,   col   )
- -> [ cells:          row,   col   ],
+ -> [ out @ cells:    row,   col   ],
     ( addToInside:    row+1, col   ),
     ( addToRightEdge: row+1, col+1 );
 
@@ -43,7 +43,7 @@ $context {
 ( addToInside:     row,   col   )
  <- [ a @ cells:   row-1, col-1 ],
     [ b @ cells:   row-1, col   ]
- -> [ cells:       row,   col   ],
+ -> [ out @ cells: row,   col   ],
     ( addToInside: row+1, col   );
 
 // We initialize the graph by putting the top-most value of
@@ -51,9 +51,10 @@ $context {
 // edge cells in the next row. These edge cell entries spawn
 // the computation for the rest of the triangle.
 ( $init: () )
- -> [ cells:          0, 0 ],
+ -> [ out @ cells:    0, 0 ],
     ( addToLeftEdge:  1, 0 ),
     ( addToRightEdge: 1, 1 );
 
 // The computation is done when we've computed [ cells: n, k ].
-( $finalize: n, k ) <- [ totalChoices @ cells: n, k ]; 
+// Note that the #n notation means that n is a field in the context.
+( $finalize: () ) <- [ totalChoices @ cells: #n, #k ]; 

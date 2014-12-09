@@ -7,10 +7,9 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
 
     // Set up arguments for new graph instantiation
     {{g.name}}Args args = {
-        /* TODO: initialize custom arguments
-         * Note that you should define the members of
-         * this struct by editing {{g.name}}_defs.h.
-         */
+        // TODO: initialize custom arguments
+        // Note that you should define the members of
+        // this struct by editing {{g.name}}_defs.h.
     };
     {% if g.ctxParams %}
     // TODO: initialize graph context parameters
@@ -23,6 +22,6 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
 
     // Exit when the graph execution completes
     CNC_SHUTDOWN_ON_FINISH(context);
-    
+
     return NULL_GUID;
 }

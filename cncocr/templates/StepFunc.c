@@ -4,9 +4,8 @@
 
 #include "{{g.name}}.h"
 
-/*{% for name in stepfun.inputColls %}
- * typeof {{name}} is {{g.itemDeclarations[name].type}}
-{%- endfor %}
+/**
+ * Step function defintion for "{{stepfun.collName}}"
  */
 void {{stepfun.collName}}({{ util.print_tag(stepfun.tag, typed=True) 
         }}{{ util.print_bindings(stepfun.inputs, typed=True)
@@ -21,7 +20,7 @@ void {{stepfun.collName}}({{ util.print_tag(stepfun.tag, typed=True)
 {%- call util.render_indented(1) -%}
 {%- call(args, ranges) util.render_io_nest(comment, input.key, decl.key, zeroBased=True) -%}
 {%- set var = input.binding ~ util.print_indices(ranges) -%}
-/* TODO: Do something with {{var}}.item */
+/* TODO: Do something with {{var}} */
 {%- endcall -%}
 {%- endcall %}
 {% endfor %}
@@ -36,11 +35,10 @@ void {{stepfun.collName}}({{ util.print_tag(stepfun.tag, typed=True)
 {%- set decl = g.itemDeclarations[output.collName] -%}
 {%- call(args, ranges) util.render_io_nest(comment, output.key, decl.key) -%}
 {%- set var = output.binding ~ util.print_indices(ranges) -%}
-{{decl.type.ptrType ~ output.binding}};
-cncHandle_t {{output.binding}}Handle = cncCreateItem_{{output.collName
-    }}(&{{output.binding}}{% if decl.type.isPtrType %}, /* TODO: count=*/1{% endif %});
+{{decl.type.ptrType ~ output.binding}} = cncCreateItem_{{output.collName
+    }}({% if decl.type.isPtrType %}/* TODO: count=*/1{% endif %});
 /* TODO: Initialize {{output.binding}} */
-cncPut_{{output.collName}}({{output.binding}}Handle, {% for x in args %}{{x}}, {% endfor %}ctx);
+cncPut_{{output.collName}}({{output.binding}}, {% for x in args %}{{x}}, {% endfor %}ctx);
 {%- endcall -%}
 {% else -%}
 {%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}

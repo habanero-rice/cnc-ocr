@@ -3,14 +3,13 @@
 /*
  * typeof Lkji is double *
  */
-void s2ComputeStep(cncTag_t k, cncTag_t j, LkjiItem LkjiA1D, LkjiItem LkjiB1D, CholeskyCtx *ctx) {
+void s2ComputeStep(cncTag_t k, cncTag_t j, double *LkjiA1D, double *LkjiB1D, CholeskyCtx *ctx) {
     int t = ctx->tileSize;
-    double (*LkjiA)[t] = (double(*)[t])LkjiA1D.item;
-    double (*LkjiB)[t] = (double(*)[t])LkjiB1D.item;
+    double (*LkjiA)[t] = (double(*)[t])LkjiA1D;
+    double (*LkjiB)[t] = (double(*)[t])LkjiB1D;
 
     // Allocate new tile
-    double *loBlock1D;
-    cncHandle_t loBlock_handle = cncCreateItem_Lkji(&loBlock1D, t*t);
+    double *loBlock1D = cncCreateItem_Lkji(t*t);
     double (*loBlock)[t] = (double(*)[t])loBlock1D;
 
     int kB, iB, jB;
@@ -23,8 +22,8 @@ void s2ComputeStep(cncTag_t k, cncTag_t j, LkjiItem LkjiA1D, LkjiItem LkjiB1D, C
                 LkjiA[ iB ][ jB ] -= LkjiB[ jB ][ kB ] * loBlock[ iB ][ kB ];
     }
 
-    cncPut_Lkji(loBlock_handle, j, k, k+1, ctx);
+    cncPut_Lkji(loBlock1D, j, k, k+1, ctx);
 
     int tagResult = (j)*(j+1)/2 + k;
-    cncPut_results(loBlock_handle, tagResult, ctx);
+    cncPut_results(loBlock1D, tagResult, ctx);
 }

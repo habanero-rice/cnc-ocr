@@ -3,11 +3,11 @@
 /*
  * typeof Lkji is double *
  */
-void s3ComputeStep(cncTag_t k, cncTag_t j, cncTag_t i, LkjiItem LkjiA1D, LkjiItem LkjiB1D, LkjiItem LkjiC1D, CholeskyCtx *ctx) {
+void s3ComputeStep(cncTag_t k, cncTag_t j, cncTag_t i, double *LkjiA1D, double *LkjiB1D, double *LkjiC1D, CholeskyCtx *ctx) {
     int t = ctx->tileSize;
-    double (*LkjiA)[t] = (double(*)[t])LkjiA1D.item;
-    double (*LkjiB)[t] = (double(*)[t])LkjiB1D.item;
-    double (*LkjiC)[t] = (double(*)[t])LkjiC1D.item;
+    double (*LkjiA)[t] = (double(*)[t])LkjiA1D;
+    double (*LkjiB)[t] = (double(*)[t])LkjiB1D;
+    double (*LkjiC)[t] = (double(*)[t])LkjiC1D;
 
     double temp;
     int jB, kB, iB;
@@ -23,5 +23,5 @@ void s3ComputeStep(cncTag_t k, cncTag_t j, cncTag_t i, LkjiItem LkjiA1D, LkjiIte
         }
     }
 
-    cncPut_Lkji(LkjiA1D.handle, j, i, k+1, ctx);
+    cncPut_Lkji(LkjiA1D, j, i, k+1, ctx);
 }
