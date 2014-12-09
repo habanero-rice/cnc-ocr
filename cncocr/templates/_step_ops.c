@@ -7,9 +7,9 @@
 {% endif %}
 {#/****** Item instance data cast ******/-#}
 {%- macro unpack_item(i) -%}
-{%- with item = g.itemDeclarations[i.collName] -%}
-{%- if not item.type.isPtrType %}*{% endif -%}
-{{ "(" ~ item.type.ptrType ~ ")" }}
+{%- with itemType = g.lookupType(i) -%}
+{%- if not itemType.isPtrType %}*{% endif -%}
+{{ "(" ~ itemType.ptrType ~ ")" }}
 {%- endwith -%}
 {%- endmacro -%}
 
@@ -30,16 +30,16 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     s32 _edtSlot = {{ 1 if paramTag else 2 }}; MAYBE_UNUSED(_edtSlot);
     {#-/****** Set up input items *****/#}
     {% for input in stepfun.inputs %}
-    {{ util.ranged_type(input) ~ input.binding }};
     {% if input.keyRanges -%}
     {#/*RANGED*/-#}
+    {{ util.ranged_type(input) ~ input.binding }};
     ocrEdtDep_t _block_{{input.binding}};
     { // Init ranges for "{{input.binding}}"
         u32 _i;
         u32 _itemCount = {{input.keyRanges|join("*", attribute='sizeExpr')}};
         u32 _dims[] = { {{input.keyRanges|join(", ", attribute='sizeExpr')}} };
         // XXX - I'd like to use pdMalloc here instead of creating a datablock
-        {{ g.lookupType(input).ptrType }}_item = _cncRangedInputAlloc({{ input.keyRanges|count
+        {{ g.lookupType(input) }}*_item = _cncRangedInputAlloc({{ input.keyRanges|count
                 }}, _dims, sizeof({{ g.lookupType(input) }}), &_block_{{input.binding}});
         {{input.binding}} = _block_{{input.binding}}.ptr;
         for (_i=0; _i<_itemCount; _i++) {
@@ -48,6 +48,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     }
     {% else -%}
     {#/*SCALAR*/-#}
+    {{ g.lookupType(input) ~ input.binding }};
     {{input.binding}} = {{unpack_item(input)}}_cncItemDataPtr(depv[_edtSlot++].ptr);
     {% endif -%}
     {% endfor %}
