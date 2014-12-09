@@ -13,9 +13,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Input output relationships
 
-( initAboveStep: tw, ntw ) -> [ above: 0, {0..ntw} ];
+( initAboveStep: tw, ntw ) -> [ above: 0, $range(ntw) ];
 
-( initLeftStep:  th, nth ) -> [ left:  {0..nth}, 0 ];
+( initLeftStep:  th, nth ) -> [ left:  $range(nth), 0 ];
 
 ( swStep: i, j )
     <- [ data: () ], [ above: i, j ], [ left: i, j ]
@@ -26,7 +26,7 @@
     -> [ startTime: () ],
        ( initAboveStep: tw, ntw ),
        ( initLeftStep: th, nth ),
-       ( swStep: {0..nth}, {0..ntw} );
+       ( swStep: $range(nth), $range(ntw) );
 
 ( $finalize: ntw, nth, tw )
     <- [ startTime: () ], [ above: nth, ntw-1 ];
