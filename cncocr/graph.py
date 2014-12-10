@@ -45,9 +45,6 @@ class RangedTC(object):
             self.sizeExpr = "({0})-({1})".format(self.end, self.start)
         if self.inclusive:
             self.sizeExpr += "+1"
-            self.operator = '<='
-        else:
-            self.operator = '<'
         self.isRanged = True
 
 

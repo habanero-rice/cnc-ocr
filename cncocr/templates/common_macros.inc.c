@@ -46,6 +46,11 @@
 {% for x in xs %}[{{x}}]{% endfor -%}
 {%- endmacro %}
 
+{#/****** Print indices for an array access ******/#}
+{% macro range_cmp_op(r) -%}
+{{ "<=" if r.incluseive else "<" }}
+{%- endmacro %}
+
 {#/* TODO: There should be a way to combine the following two macros
      (especially now since I lifted out the memory allocation stuff) */#}
 {#/****** For-loop nest for iterating over a multi-dimentional
@@ -59,7 +64,7 @@
 {% set idx = "_i" ~ loop.index0 -%}
 {% if k.isRanged %}{#/* Range */#}
 s64 {{idx}};
-for ({{idx}} = {{k.start}}; {{idx}} {{k.operator}} {{k.end}}; {{idx}}++) {
+for ({{idx}} = {{k.start}}; {{idx}} {{range_cmp_op(k)}} {{k.end}}; {{idx}}++) {
 {%- do ranges.append("["~idx~"]") -%}
 {%- else %}{#/* Scalar */#}
 s64 {{idx}} = {{k.expr}};
@@ -99,7 +104,7 @@ s64 {{idx}} = {{k.expr}};
 {% call render_indented(loop.index) %}
 {% set startVal = 0 if zeroBased else x.start -%}
 {% set endVal = x.sizeExpr if zeroBased else x.end -%}
-for ({{idx}} = {{startVal}}; {{idx}} {{x.operator}} {{endVal}}; {{idx}}++) {
+for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) {
 {%- endcall -%}
 {%- endfor -%}
 {% set content = caller(args, ranges|map('first')|list) -%}
