@@ -34,8 +34,9 @@ the CnC-OCR bin directory (which contains the graph translator tool).
 * Setting up the environment for Intel(R) CnC
 *
 
-Get the latest Intel(R) CnC (binary) package from https://icnc.github.io, install it and setup
-your CnC environment as described in the docs there (source <cncroot>/bin/cncvars.[c]sh).
+Get the latest Intel(R) CnC (binary) package from https://icnc.github.io,
+install it and setup your CnC environment as described in the docs there
+(source <cncroot>/bin/cncvars.[c]sh).
 
 Make sure the translator script is in your PATH, e.g. by doing
 
