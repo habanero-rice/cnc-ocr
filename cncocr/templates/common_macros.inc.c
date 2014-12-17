@@ -48,7 +48,7 @@
 
 {#/****** Print indices for an array access ******/#}
 {% macro range_cmp_op(r) -%}
-{{ "<=" if r.incluseive else "<" }}
+{{ "<=" if r.inclusive else "<" }}
 {%- endmacro %}
 
 {#/* TODO: There should be a way to combine the following two macros
@@ -103,7 +103,7 @@ s64 {{idx}} = {{k.expr}};
 {%- for idx, x in ranges -%}
 {% call render_indented(loop.index) %}
 {% set startVal = 0 if zeroBased else x.start -%}
-{% set endVal = x.sizeExpr if zeroBased else x.end -%}
+{% set endVal = x.upperLoopBound if zeroBased else x.end -%}
 for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) {
 {%- endcall -%}
 {%- endfor -%}
