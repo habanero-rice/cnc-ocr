@@ -5,10 +5,10 @@
     - gcc
     - curl
     - Python (2.6 or 2.7)
-    - OCR (0.9)
+    - OCR (0.9) or Intel(R) CnC
 
 *
-* Setting up the environment
+* Setting up the environment for OCR
 *
 
 If you have a copy of the xstack repository, the CnC-OCR root directory (which
@@ -31,11 +31,26 @@ CNCOCR_INSTALL to point to the CnC-OCR root, and updates the PATH to include
 the CnC-OCR bin directory (which contains the graph translator tool).
 
 *
+* Setting up the environment for Intel(R) CnC
+*
+
+Get the latest Intel(R) CnC (binary) package from https://icnc.github.io,
+install it and setup your CnC environment as described in the docs there
+(source <cncroot>/bin/cncvars.[c]sh).
+
+Make sure the translator script is in your PATH, e.g. by doing
+
+    source setup_env.sh
+
+
+*
 * Running the translator
 *
     cncocr_t [options] FileName.cnc
 
 The first time you run the graph translator, it will download and install several Python dependencies, which will be saved in ${CNCOCR_INSTALL}/py for future use.
+
+For Intel(R) CnC use the option --intel.
 
 *
 * Docs
