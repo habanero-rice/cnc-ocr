@@ -18,7 +18,7 @@ LIBHC := -lhc
 CC := gcc
 HCC_FLAGS :=
 endif
-LD_FLAGS := -L${HC_HOME}/lib $(LIBHC) -lxml2# -lpthread
+LD_FLAGS := -L${HC_HOME}/lib $(LIBHC) -lm -lxml2# -lpthread
 INCLUDE_FLAGS := -I${HC_HOME}/include/hc
 
 TARGET := {{g.name}}

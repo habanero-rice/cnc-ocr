@@ -42,6 +42,38 @@
 {% for x in xs %}[{{x}}]{% endfor -%}
 {%- endmacro %}
 
+{#/****** For-loop nest for iterating over a multi-dimentional
+          item array based on a ranged tag function ******/#}
+{% macro render_hc_gets_nest(comment, item) %}
+{% set ranges = [] -%}
+{% set indices = [] -%}
+{% macro iVarIndexed() %}{{item.binding ~ ranges|join}}{% endmacro -%}
+DDF_list_t *{{item.binding}} = DDF_LIST_CREATE();
+{ // {{comment}}
+{%- for k in item.key -%}
+{% set idx = "_i" ~ loop.index0 -%}
+{%- do indices.append(idx~", ") -%}
+{% call render_indented(1 + ranges|count) -%}
+{% if k.isRanged %}{#/* Range */#}
+s64 {{idx}};
+for ({{idx}} = 0; {{idx}} < {{k.sizeExpr}}; {{idx}}++) {
+{%- do ranges.append(idx~", ") -%}
+{%- else %}{#/* Scalar */#}
+s64 {{idx}} = {{k.expr}};
+{%- endif -%}
+{%- endcall -%}
+{%- endfor -%}
+{%- call render_indented(1 + ranges|count) %}
+DDF_LIST_ADD(cncGet_{{item.collName}}({{ indices|join }}ctx), {{item.binding}});
+{%- endcall -%}
+{%- for r in item.keyRanges -%}
+{% call render_indented(1 + loop.revindex0) %}
+}
+{%- endcall -%}
+{%- endfor %}
+}
+{%- endmacro %}
+
 {#/* TODO: There should be a way to combine the following two macros
      (especially now since I lifted out the memory allocation stuff) */#}
 {#/****** For-loop nest for iterating over a multi-dimentional

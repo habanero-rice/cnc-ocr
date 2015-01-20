@@ -1,6 +1,6 @@
 {% import "common_macros.inc.c" as util with context -%}
 
-{% set defname = "_CNCOCR_" ~ g.name.upper() ~ "_TYPES_H_" -%}
+{% set defname = "_CNCOCR_" ~ g.name.upper() ~ "_ITEM_INFO_H_" -%}
 #ifndef {{defname}}
 #define {{defname}}
 

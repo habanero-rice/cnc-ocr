@@ -10,6 +10,21 @@
 {%- endwith -%}
 {%- endmacro -%}
 
+
+// XXX - assuming flat (1D) ranges
+void *_cncUnpackRange(DDF_list_t *ddl) {
+    void **data = hc_malloc(sizeof(void*) * ddl->lsize);
+    DDF_list_node_t *n = ddl->head;
+    void **p = data;
+    while (n) {
+        *p = (void*)n->self->datum;
+        n = n->nextNode;
+        p++;
+    }
+    return (void*)data;
+}
+
+
 {% for stepfun in g.finalAndSteps %}
 #define {{ util.coll2id(stepfun.collName) }} {{ loop.index0 }}
 {%- endfor %}
@@ -58,9 +73,16 @@ void cncPrescribe_{{stepfun.collName}}({{
     {#-/****** Set up input items *****/#}
     {% for input in stepfun.inputs %}
     // Set up "{{input.binding}}" input dependencies
+    {% if input.keyRanges -%}
+    {#/*RANGED*/-#}
+    {% set comment = "// Init ranges for \"" ~ input.binding ~ "\"" -%}
+    {{ util.render_hc_gets_nest(comment, input) }}
+    {% else -%}
+    {#/*SCALAR*/-#}
     DDF_t *{{input.binding}} = cncGet_{{input.collName}}(
             {%- for k in input.key %}{{k.expr}}, {% endfor -%}
             ctx);
+    {% endif %}
     {% endfor %}
 
     // TODO - refactor into an _internal helper function (no rank check)
@@ -71,7 +93,9 @@ void cncPrescribe_{{stepfun.collName}}({{
         {{ util.log_msg("RUNNING", stepfun.collName, stepfun.tag) }}
         {{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}
                 {%- for input in stepfun.inputs -%}
-                {% if g.lookupType(input).isPtrType -%}
+                {% if input.keyRanges -%}
+                _cncUnpackRange({{input.binding}}),
+                {% elif g.lookupType(input).isPtrType -%}
                 ({{input.collName}}Item){{input.binding}}->datum,
                 {%- else -%}
                 *({{input.collName}}Item*){{input.binding}}->datum,
@@ -129,7 +153,6 @@ void hc_cnc_xprescribe_internal(void *msg) {
     // XXX - debugging
     xtag[0] = 9999;
 }
-
 #endif
 
 void {{g.name}}_launch({{g.name}}Args *args, {{g.name}}Ctx *ctx) {
