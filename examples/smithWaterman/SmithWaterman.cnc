@@ -2,24 +2,16 @@
 // Author: Nick Vrvilo (nick.vrvilo@rice.edu)
 ////////////////////////////////////////////////////////////////////////////////
 
+$context {
+    int tw, th, ntw, nth;
+    int dataSize;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // item collection declarations
 
-[ int *above ];    // Last row of tile above
-[ int *left  ];    // Last column of tile to the left
-[ SeqData *data ]; // Static data for the sequences and tile sizes
-[ struct timeval *startTime ]; // Only used for timing the computation
-
-////////////////////////////////////////////////////////////////////////////////
-// Control tags and steps
-
-< int [2] swTag > ;  
-< int [2] initAboveTag > ;  
-< int [2] initLeftTag > ;  
-
-< swTag > :: ( swStep ) ;	
-< initAboveTag > :: ( initAboveStep ) ;	
-< initLeftTag > :: ( initLeftStep ) ;	
+[ int *above : i, j ];    // Last row of tile above
+[ int *left  : i, j ];    // Last column of tile to the left
 
 ////////////////////////////////////////////////////////////////////////////////
 // Input output relationships
@@ -28,16 +20,15 @@
 
 ( initLeftStep:  th, nth ) -> [ left:  {0..nth}, 0 ];
 
-[ data: 0 ],
-[ above: i, j ], [ left: i, j ]
--> ( swStep: i, j ) ->
-[ above: i+1, j ], [ left: i, j+1 ];
+( swStep: i, j )
+    <- [ above: i, j ], [ left: i, j ]
+    -> [ below @ above: i+1, j ], [ right @ left: i, j+1 ];
 
 // Write graph inputs and start steps
-env -> [ startTime: 0 ];
-env -> < initAboveTag: tw, ntw >, < initLeftTag: th, nth >;
-env -> < swTag: {0..ntw}, {0..nth} >;
+( $init: ntw, nth, tw, th )
+    -> [ startTime: () ],
+       ( initAboveStep: tw, ntw ),
+       ( initLeftStep: th, nth ),
+       ( swStep: {0..nth}, {0..ntw} );
 
-// Return outputs to the caller
-[ startTime: 0 ], [ above: nth, ntw-1 ] -> ( env: ntw, nth, tw );
-
+( $finalize: ntw, nth, tw ) <- [ above: nth, ntw-1 ];

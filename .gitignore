@@ -1,0 +1,6 @@
+*.pyc
+lib/*
+!lib/getdeps.sh
+.depsOK
+*.o
+rose_*.c

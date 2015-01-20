@@ -1,132 +1,81 @@
 *
 * Installation Prerequisites
 *
-	- ant
 	- make
-	- java (JAVA_HOME set)
+	- Python (2.7)
 	- gcc
-	- libxml2
-	- OCR (0.8)
+	- OCR (0.9)
 
-*
-* Building the CnC-OCR distribution 
-*
-
-The following creates a distribution in folder 'cncocr_distrib': 
-
-	make dist
-
-The resulting distribution has the followign layout:
-	- bin/
-		Contains the cncocr translator
-	- includes/
-		Contains include files of the cncocr runtime
-	- lib/
-		Contains the object file generated from cncocr runtime sources
-	
 *
 * Setting up the environment
 *
-   - Ensure OCR env is set:
-	export OCR_INSTALL=`your_ocr_checkout`/ocr-install
-	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OCR_INSTALL}/lib
-   - Set up CnC env:
-	export CNCOCR_INSTALL=`pwd`/cncocr_distrib
-	export PATH=$PATH:${CNCOCR_INSTALL}/bin
-     You can source set_cncocr_home from the current directory to achieve this, too.
+
+If you have a copy of the xstack repository, the CnC-OCR root directory (which
+contains this README) should be in the xstack/hll directory. The expected
+directory structure is as follows:
+
+   - xstack/ : the root xstack source directory
+   - xstack/ocr/ : the source root for OCR
+   - xstack/hll/ : high-level-libraries for OCR
+   - xstack/hll/cncocr/ : CnC-OCR root directory (name doesn't matter)
+
+If you don't have a copy of the xstack repository, you can still mimic this
+directory structure to get the expected behavior. To set the needed environment
+variables, navigate to the CnC-OCR root directory and source setup_env.sh:
+
+	source setup_env.sh
+
+This script sets the XSTACK_SRC variable to point to the xstack repository root,
+CNCOCR_INSTALL to point to the CnC-OCR root, and updates the PATH to include
+the CnC-OCR bin directory (which contains the graph translator tool).
 
 *
 * Running the translator
 *
 	cncocr_t [options] FileName.cnc
 
+The first time you run the graph translator, it will download its dependencies (Jinja2 and Pyparsing), which will be saved in ${CNCOCR_INSTALL}/lib for future use.
 
 *
 * Docs
 *
-	Some additional documentation on the CnC model can be found in docCnCHC.pdf, a document created part of the CDSC project. 
-	In spite of the fact that the document was designed for CnC-HC rather than CnC-OCR, it is never the less informative about creating a .cnc file and changing it, concepts that still apply for CnC-OCR.
+
+Please visit the CnC-OCR wiki on Github for current documentation.
+   https://github.com/habanero-rice/cnc-ocr/wiki
+
+Some additional documentation on the CnC model can be found in docCnCHC.pdf, a document created part of the CDSC project. 
+Despite the fact that the document was designed for CnC-HC rather than CnC-OCR, it is never the less informative about creating a .cnc file and changing it, concepts that still apply for CnC-OCR. The document can be found on our github page:
+	https://github.com/habanero-rice/cnc-ocr/blob/master/docCnCHC.pdf
 
 ============================================================================
-
 *
-* Creating a CnC-OCR application
+* Creating CnC-OCR applications
 *
 
 1) For any CnC-OCR application, the first step is to create the CnC graph file (name.cnc) which will define the steps, item collections and tag collections and the relations between them.
 2) The second step is invoking the translator:
-cncc_t name.cnc
-   This will generate a series of files: 
-     - Common.* Context.* Dispatch.* => These files create the link between the user code and the CnC runtime. They are normally not modified, and are overwriten on subsequent calls of the translator. If tag functions are not present in the graph file, then the Common.* files need to be edited to call the appropriate Get functions. For using user-defined types or global constants, the user may add the proper includes in Context.h.
-     - 'StepName'.hc => A step stub will be generated for every step defined in the graph. These need to be edited by the user with the afferent computation. The step files will not be overwritten on subsequent calls of the translator. The role of the stubs is to provide suggested code for Put and prescribe calls based on the information retrieved from the .cnc file. These calls are optional, meaning that, for a particular step instance, the user may choose not to Put (write) all data declared in the graph file or not to prescribe (spawn) all steps specified. The full-auto option makes Puts and prescibes compulsory thus avoiding the need for edits, but restricting the application space.
-     - Main.hc => Contains the main() for the program and had generated code on how a graph should be created and places initialized. It is not overwritten on further translator calls. 
-     - Makefile => Contains a reference Makefile for building the application using the generated files. It is not overwritten on further translator calls.
+cncc_t graph_name.cnc
+   This will generate a bunch of files. The files generated in the current directory should be edited by the application author. The files in the cncocr_support directory interfaces the user code with the underlying OCR runtime and should rarely need any editing.
+3) The third step is editing the code in the current directory to implement the graph's init, finalize, and step functions. Additionally, you may need to edit the mainEdt (in Main.c) to parse command-line arguments and pass them to the CnC graph when launched.
+4) make run ARGS="arg1 arg2 arg3 ..."
 
-Note: Current default runtime is _Data_Driven. (Alternative is Rollback_and_Replay. This is currently set in DataDriven.h)
-3) The third step is adding the computation steps to each step stub and editing the Main to start the execution of the CnC graph.
-4) make; ./name.exec args
+See the examples (in the examples directory) for further details.
 
-Note: in CnC-OCR (as opposed to CnC-HC) the code generation in Main is not yet polished. Please refer to ${CNCOCR_INSTALL}/src/examples for guidelines.
-
-*
-* Examples
-*
-
-1)simpleTest
-cd simpleTest
-cncocr_t simpleTest.cnc
-make
-./simpleTest.exec -nproc 16
-
-2)choleskyFactorization
-cd choleskyFactorization
-cncocr_t Cholesky.cnc
-make
-./Cholesky.exec -nproc 8 2000 125  ../cnc_big_inputs/Cholesky/m_2000.in 
-
-Use batch.sh script for additional runs and more arguments.
-
-*
-* Additional arguments
-*
-
-Additional CnC arguments (run cncocr_t):
-Usage: cncocr_t [options] <cnc_input> ...
-where [options] includes:
-	-h -help --help		print this message
-	-d			dump parsed tokens
-	-k			dump keywords
-	-p			print the AST
-	-dir			directory for placing generated files
-	-full-auto		fully automate Main.hc and step stubs for CDSC applications 
-				(This option limits the applications that can be expressed 
-				 but the generated step stubs and Main.hc need not be edited.
-				 The user only write the code doing computation in his own *.c files)
-
-Additional HC arguments (run executable --help):
-HC options:
-    --nproc <n> : the number of processors, env: HC_NPROC
-    --hpt <hpt-spec.xml> : the HPT specification XML file, env: HC_HPT
-    --hpt2dot : Output hpt to dot file for visualization, env: HC_HPT2DOT
-    --deqsize <n> : the deque size (default 1024), env: HC_DEQSIZE
-    --pthread-stacksize <n> : set the stack size of the worker pthreads, env: HC_PTHREAD_STACKSIZE
-    --hf : set the scheduling policy to HELP_FIRST, env: 
-    --wf : set the scheduling policy to WORK_FIRST, env: 
-    --sched_policy <WORK_FIRST|HELP_FIRST> : set the scheduling policy, default: WORK_FIRST, env: HC_SCHED_POLICY
-    --bind <bind-file> : thread binding map of worker to cpu, env: HC_BIND_THREAD
-    --version : print version of the Habanero C runtime system, env: 
-    --help : print this message, env: 
 
 *
 * Help
 *
-For any questions, problems or bug reports email as44@rice.edu.
+You can submit bug reports and other issues on our github page:
+https://github.com/habanero-rice/cnc-ocr
+
+Please also check the github page for current contact information.
 
 
 *
 * Acknowledgements
 *
-
 Partial support for CnC-OCR was provided through the CDSC program of 
 the National Science Foundation with an award in the 2009 Expedition 
 in Computing Program.
+This work is actively supported as part ofthe DOE-funded Traleika Glacier
+X-Stack project (Intel CS1924113).
