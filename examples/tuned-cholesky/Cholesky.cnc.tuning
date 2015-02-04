@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Alina Sbirlea - alina@rice.edu
 // Adapted for CnC-HC after Sagnak Tasirlar's Cholesky for HJ-CnC
 // influenced by Aparna Chandramowlishwaran's Intel CnC C++ implementation
@@ -13,14 +13,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // item collection declarations
 
-//[ double *Lkji: j, i, k ];  // The input/intermediate matrix tiles
+[ Lkji: j, i, k ]: { k % $RANKS };  // The input/intermediate matrix tiles
 [ results: i ]: { 0 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Input output relationships (comments are Aparna's )
 
 // The kComputeStep produces 'k' loop indices (in the form of tag instance )
-//( kComputeStep: () )
+//( kComputeStep: k )
 
 // The kjCompute step produces 'j' loop indices (in the form of tag instance )
 //( kjComputeStep: k )

@@ -8,6 +8,8 @@ ifndef ARGS
 ARGS:=$(WORKLOAD_ARGS)
 endif
 
+HCC ?= mpihcc
+
 ifeq "$(HCC)" "mpihcc"
 LIBHC := -lhccomm
 #LIBHC := ${HC_HOME}/lib/libhccomm.a

@@ -17,30 +17,19 @@ cncHandle_t cncCreateItemSized_{{i.collName}}({{i.type.ptrType}}*item, size_t si
     return handle;
 }
 
-void cncPutChecked_{{i.collName}}(cncHandle_t _handle, {{
+void cncPutCheckedR_{{i.collName}}(cncHandle_t _handle, {{
         util.print_tag(i.key, typed=True)
-        }}bool _checkSingleAssignment, {{g.name}}Ctx *ctx) {
+        }}bool _checkSingleAssignment, int _srcRank, {{g.name}}Ctx *ctx) {
     {% if i.key %}
     cncTag_t _tag[] = { {{i.key|join(", ")}} };
     {% else %}
     cncTag_t *_tag = NULL;
     {% endif %}
-#ifdef HC_COMM
-    int _rank = {{ util.itemDistFn(i) }};
-    if (_rank != HCMPI_COMM_RANK) {
-        LOG_INFO("Remote put {{i.collName}}\n");
-        hc_cnc_put(_rank, {{ util.coll2id(i.collName) }}, _tag, {{i.key|count}}, _handle, cncItemSize_{{i.collName}}(ctx));
-        return;
-    }
-    else {
-        LOG_INFO("Local put {{i.collName}}\n");
-    }
-#endif
     {% if not i.isVirtual -%}
     {#/*****NON-VIRTUAL*****/-#}
     {{ util.log_msg("PUT", i.collName, i.key) }}
     {% if i.key -%}
-    _cncPut(_handle, (unsigned char*)_tag, sizeof(_tag), ctx->_items.{{i.collName}}, _checkSingleAssignment);
+    _cncPut(_handle, (unsigned char*)_tag, sizeof(_tag), ctx->_items.{{i.collName}}, _checkSingleAssignment, _srcRank);
     {%- else -%}
     CNC_DDF_PUT(ctx->_items.{{i.collName}}, _handle);
     {%- endif %}
@@ -48,18 +37,28 @@ void cncPutChecked_{{i.collName}}(cncHandle_t _handle, {{
     {% set targetColl = g.itemDeclarations[i.mapTarget] -%}
     {% if i.isInline -%}
     {#/*****INLINE VIRTUAL*****/-#}
-    cncPutChecked_{{i.mapTarget}}(_handle, {{
+    cncPutCheckedR_{{i.mapTarget}}(_handle, {{
         util.print_tag(i.keyFunction)
-        }}_checkSingleAssignment, ctx);
+        }}_checkSingleAssignment, _srcRank, ctx);
     {%- else -%}
     {#/*****EXTERN VIRTUAL******/-#}
     {{i.mapTarget}}ItemKey _key = {{i.functionName}}({{
         util.print_tag(i.key) }}ctx);
-    cncPutChecked_{{i.mapTarget}}(_handle, {{
+    cncPutCheckedR_{{i.mapTarget}}(_handle, {{
         util.print_tag(targetColl.key, prefix="_key.")
-        }}_checkSingleAssignment, ctx);
+        }}_checkSingleAssignment, _srcRank, ctx);
     {%- endif %}
     {%- endif %}
+#ifdef HC_COMM
+    int _rank = {{ util.itemDistFn(i) }};
+    if (_rank != HCMPI_COMM_RANK) {
+        LOG_INFO("Remote put {{i.collName}}\n");
+        hc_cnc_put(_rank, {{ util.coll2id(i.collName) }}, _tag, {{i.key|count}}, _handle, cncItemSize_{{i.collName}}(ctx));
+    }
+    else {
+        LOG_INFO("Local put {{i.collName}}\n");
+    }
+#endif
 }
 
 DDF_t *cncGet_{{i.collName}}({{ util.print_tag(i.key, typed=True) }}{{g.name}}Ctx *ctx) {
@@ -121,12 +120,12 @@ void {{g.name}}_startItemCollDaemons({{g.name}}Ctx * ctx) {
     {% endfor %}
 }
 
-void hc_cnc_xput(int collID, int *key, void *data) {
+void hc_cnc_xput(int collID, int *key, void *data, int srcRank) {
     switch (collID) {
     {% for i in g.itemDeclarations.values() %}
         case {{ util.coll2id(i.collName) }}: {
-            cncPutChecked_{{i.collName}}(data, {% for k in i.key -%}
-                key[{{loop.index0}}], {% endfor %}false, {{ util.globalCtx(g) }});
+            cncPutCheckedR_{{i.collName}}(data, {% for k in i.key -%}
+                key[{{loop.index0}}], {% endfor %}false, srcRank, {{ util.globalCtx(g) }});
             return;
         }
     {% endfor %}

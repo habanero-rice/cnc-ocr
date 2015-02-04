@@ -92,7 +92,7 @@ static ItemCollectionEntry * _allocateEntryIfAbsent(
 }
 
 /* Putting an item into the hashmap */
-bool _cncPut(void *item, unsigned char *tag, int tagLength, ItemCollectionEntry ** hashmap, bool isSingleAssignment) {
+bool _cncPut(void *item, unsigned char *tag, int tagLength, ItemCollectionEntry ** hashmap, bool isSingleAssignment, int srcRank) {
     
     ASSERT(tag != NULL && "Put - ERROR================\n");
 
@@ -104,6 +104,9 @@ bool _cncPut(void *item, unsigned char *tag, int tagLength, ItemCollectionEntry 
     if(entry == NULL && !isSingleAssignment)
         return false;
     /* Now, we have the correct placeholder (either inserted by us or by a Get function) */
+#ifdef HC_COMM
+    entry->ddf.srcRank = srcRank;
+#endif
     CNC_DDF_PUT(&entry->ddf, item);
     LOG_INFO("Put into ddf=%p\n", &entry->ddf);
 

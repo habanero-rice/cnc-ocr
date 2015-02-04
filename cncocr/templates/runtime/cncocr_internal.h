@@ -22,7 +22,7 @@ extern void *memcpy(void *dest, const void *src, size_t n);
 
 #define CNC_TABLE_SIZE 512 /* TODO - Table size should be set by the user when initializing the item collection */
 
-bool _cncPut(void *item, unsigned char *tag, int tagLength, cncItemCollection_t collection, bool isSingleAssignment);
+bool _cncPut(void *item, unsigned char *tag, int tagLength, cncItemCollection_t collection, bool isSingleAssignment, int srcRank);
 
 DDF_t *_cncGet(unsigned char *tag, int tagLength, cncItemCollection_t collection);
 

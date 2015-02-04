@@ -3,6 +3,8 @@ ifndef HC_HOME
 $(error Please define HC_HOME)
 endif
 
+HCC ?= mpihcc
+
 ifeq "$(HCC)" "mpihcc"
 #LIBHC := -lhccomm
 LIBHC := ${HC_HOME}/lib/libhccomm.a
@@ -50,16 +52,16 @@ clean:
 	rm -f $(ALL_OBJS) $(TARGET) rose_*
 
 POLICY=-hf
-NPROC=-nproc 1
 BIND=--bind ./bind-davinci.txt
 HPT=--hpt ./hpt-davinci-comm.xml
 HCR_OPT=$(POLICY) $(NPROC) $(BIND) $(HPT)
-INSZ=2000
-TSZ=125
+INSZ=500
+TSZ=50
+INFILE=/projects/vs3/cholesky-input/m_$(INSZ).in
 
 run: compile
 	echo $(ARGS)
-	./$(TARGET) $(HCR_OPT) $(INSZ) $(TSZ) $(HOME)/cnc-inputs/Cholesky/m_$(INSZ).in
+	./$(TARGET) $(HCR_OPT) $(INSZ) $(TSZ) $(INFILE)
 
 gdb: compile
-	gdb -ex r --args ./$(TARGET) $(HCR_OPT) $(INSZ) $(TSZ) $(HOME)/cnc-inputs/Cholesky/m_$(INSZ).in
+	gdb -ex r --args ./$(TARGET) $(HCR_OPT) $(INSZ) $(TSZ) $(INFILE)

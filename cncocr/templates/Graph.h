@@ -85,9 +85,11 @@ cncHandle_t cncCreateItemSized_{{name}}({{i.type.ptrType}}*, size_t);
 \**************************/
 {% for name, i in g.itemDeclarations.items() %}
 {# /* TODO - ADD NAMESPACE PREFIX DEFINE THING */ -#}
-void cncPutChecked_{{name}}(cncHandle_t handle, {{
+void cncPutCheckedR_{{name}}(cncHandle_t handle, {{
         util.print_tag(i.key, typed=True)
-        }}bool checkSingleAssignment, {{g.name}}Ctx *context);
+        }}bool checkSingleAssignment, int srcRank, {{g.name}}Ctx *context);
+#define cncPutChecked_{{name}}(handle, {{ util.print_tag(i.key) }}chk, context) \
+ cncPutCheckedR_{{name}}(handle, {{ util.print_tag(i.key) }}chk, -1, context)
 #define cncPut_{{name}}(handle, {{ util.print_tag(i.key) }}context) \
  cncPutChecked_{{name}}(handle, {{ util.print_tag(i.key) }}true, context)
 {% endfor %}
