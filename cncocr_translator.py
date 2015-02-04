@@ -10,15 +10,12 @@ argParser = argparse.ArgumentParser(prog="cncocr_t", description="Process CnC-OC
 argParser.add_argument('--log', action='store_true', help="turn on debug logging for CnC steps")
 argParser.add_argument('--platform', choices=['x86', 'ocr'], default='x86', help="target platform for the CnC-OCR runtime")
 argParser.add_argument('--full-make', action='store_true', help="Use the full OCR build system by default (changes the Makefile symlink)")
-argParser.add_argument('--fsim', action='store_true', help="alias of --platform=ocr --full-make")
+argParser.add_argument('--hpt', action='store_true', help="use HPTs for tuning")
 argParser.add_argument('-t', help="optional tuning spec file")
 argParser.add_argument('specfile', help="CnC-OCR graph spec file")
 args = argParser.parse_args()
 
 # Handle aliases
-if args.fsim:
-    args.platform='ocr'
-    args.full_make=True
 
 # Check spec file name
 nameMatch = re.match(r'^(.*/)?(?P<name>[a-zA-Z]\w*)(?P<cnc>\.cnc)?$', args.specfile)
@@ -63,7 +60,7 @@ def writeTemplate(templatepath, namepattern=None, overwrite=True, destdir=suppor
     outpath = "{0}/{1}".format(destdir, filename)
     if overwrite or not os.path.isfile(outpath):
         template = templateEnv.get_template(templatepath)
-        contents = template.render(g=graphData, targetStep=step, logEnabled=args.log, tuningInfo=tuningData)
+        contents = template.render(g=graphData, targetStep=step, logEnabled=args.log, tuningInfo=tuningData, useHPT=args.hpt)
         with open(outpath, 'w') as outfile:
             outfile.write(contents)
             outfile.close()

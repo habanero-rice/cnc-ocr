@@ -97,6 +97,11 @@ void cncPutChecked_{{name}}(cncHandle_t handle, {{
 
 {% for stepfun in g.finalAndSteps -%}
 #pragma hc continuable
+void cncPrescribeT_{{stepfun.collName}}(void *args);
+#pragma hc continuable
+void cncPrescribeR_{{stepfun.collName}}({{
+        util.print_tag(stepfun.tag, typed=True) }}{{g.name}}Ctx *ctx);
+#pragma hc continuable
 void cncPrescribe_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True) }}{{g.name}}Ctx *ctx);
 {% endfor %}

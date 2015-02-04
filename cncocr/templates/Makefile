@@ -27,6 +27,8 @@ CC_OPTS := -pthread -Wno-unknown-pragmas
 CFLAGS := -DOCR_ASSERT -g -O2 -I. -I.. -Icncocr_support -Wall $(CC_OPTS) $(HCC_FLAGS)
 
 include cncocr_support/{{g.name}}_defs.mk
+CFLAGS += $(HPTDEF)
+
 CNC_RUNTIME_SRCS := cncocr_support/cncocr.c
 CNC_OP_SRCS := cncocr_support/{{g.name}}_item_ops.c cncocr_support/{{g.name}}_graph_ops.c
 HC_SRCS := {{g.name}}.hc Main.hc cncocr_support/{{g.name}}_step_ops.hc $(CNC_STEP_SRCS)

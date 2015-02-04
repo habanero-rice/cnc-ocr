@@ -175,11 +175,13 @@ cncGraphSpec.ignore(cppStyleComment)
 # CNC GRAPH TUNING SPEC
 # (parses an entire spec file)
 
+distFn = joined(notSpace(OneOrMore(CharsNotIn("()[]{},") | cSubExpr)))
+
 itemTuning = Group("[" + cVar('collName') + ":" + tagDecl('key') + "]"
-                  + ":" + "{" + scalarExpr('distFn') + "}" + ";")
+                  + ":" + "{" + distFn('distFn') + "}" + ";")
 
 stepTuning = Group("(" + cVar('collName') + ":" + tagDecl('tag') + ")"
-                  + ":" + "{" + scalarExpr('distFn') + "}" + ";")
+                  + ":" + "{" + distFn('distFn') + "}" + ";")
 
 itemCollsTuning = ZeroOrMore(itemTuning)
 stepCollsTuning = ZeroOrMore(stepTuning)

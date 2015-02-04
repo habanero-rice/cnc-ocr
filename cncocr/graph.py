@@ -184,6 +184,14 @@ class CnCGraph(object):
     def lookupType(self, item):
         return self.itemDeclarations[item.collName].type
 
+class DistFn(object):
+    def __init__(self, expr, collID, numRanks):
+        self.raw = expr.strip()
+        self.expanded = self.raw.replace("$ID", collID).replace("$RANKS", numRanks)\
+                                .replace("@", "args->").replace("#", "ctx->")
+    def __str__(self):
+        return self.expanded
+
 class CnCTuningInfo(object):
     def __init__(self, g, ast):
         self.g = g
@@ -197,9 +205,7 @@ class CnCTuningInfo(object):
     def itemDistFn(self, collName, collID, numRanks):
         entry = self.itemColls.get(collName)
         if entry:
-            res = entry.distFn.replace("$ID", collID)
-            res = res.replace("$RANKS", numRanks)
-            return res
+            return DistFn(entry.distFn, collID, numRanks)
         else:
             coll = self.g.itemDeclarations[collName]
             distVar = coll.key[0] if coll.key else collID
@@ -208,9 +214,7 @@ class CnCTuningInfo(object):
     def stepDistFn(self, collName, collID, numRanks):
         entry = self.stepColls.get(collName)
         if entry:
-            res = entry.distFn.replace("$ID", collID)
-            res = res.replace("$RANKS", numRanks)
-            return res
+            return DistFn(entry.distFn, collID, numRanks)
         else:
             coll = self.g.stepFunctions[collName]
             distVar = coll.tag[0] if coll.tag else collID

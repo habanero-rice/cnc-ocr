@@ -9,4 +9,7 @@ CNC_STEP_SRCS := {% for s in g.stepFunctions %}{{ g.name ~ "_" ~ s ~ ".hc" }} {%
 # single worker when logging
 CFG_NAME ?= mach-hc-1w.cfg
 {% endif %}
+{% if useHPT -%}
+HPTDEF := -DHC_TUNING
+{%- endif %}
 {% block additional_defs %}{% endblock additional_defs %}

@@ -81,8 +81,10 @@ hc_free(context->_items.{{i.collName}});
 // Rose-generated grossness
 typedef struct __hc_hc_cnc_xprescribe_internal__frame_t__ {
   struct hc_frameHeader header;
-  s32 *xtag;
-  s32 coll;
+  {% if useHPT %}
+  struct hc_finishState fscache[1];
+  place_t *root_pl;
+  {% endif %}
   void *msg;
 } HC_PFrame;
 void __hc_hc_cnc_xprescribe_internal__(struct hc_workerState *ws,struct hc_frameHeader *__hc_frame__,int __hc_pc__);

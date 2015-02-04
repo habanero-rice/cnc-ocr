@@ -1,0 +1,39 @@
+////////////////////////////////////////////////////////////////////////////////
+// Alina Sbirlea - alina@rice.edu
+// Adapted for CnC-HC after Sagnak Tasirlar's Cholesky for HJ-CnC
+// influenced by Aparna Chandramowlishwaran's Intel CnC C++ implementation
+// and by Zoran Budimlic's Habanero CnC Java implementation
+// 
+// Updated for CnC-OCR by Nick Vrvilo (nick.vrvilo@rice.edu)
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// graph parameters
+
+////////////////////////////////////////////////////////////////////////////////
+// item collection declarations
+
+//[ double *Lkji: j, i, k ];  // The input/intermediate matrix tiles
+[ results: i ]: { 0 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Input output relationships (comments are Aparna's )
+
+// The kComputeStep produces 'k' loop indices (in the form of tag instance )
+//( kComputeStep: () )
+
+// The kjCompute step produces 'j' loop indices (in the form of tag instance )
+//( kjComputeStep: k )
+
+// The kjiComputeStep produces 'i' loop indices (in the form of tag instance )
+//( kjiComputeStep: k, j ) -> ( s3ComputeStep: k, j, { k+1 .. j+1 } );
+
+// Step 1 Executions
+//( s1ComputeStep: k )
+ 
+// Step 2 Executions
+( s2ComputeStep: k, j ): { j % $RANKS };
+
+// Step 3 Executions
+( s3ComputeStep: k, j, i ): { j % $RANKS };
+

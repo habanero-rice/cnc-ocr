@@ -34,6 +34,7 @@ void *_cncUnpackRange(DDF_list_t *ddl) {
 #ifdef HC_COMM
 static int _done[1];
 static HCMPI_Status *_doneReq;
+void hc_cnc_xprescribe_local(s32 coll, s32 *tag);
 #endif 
 
 {% if not isFinalizer %}
@@ -44,6 +45,7 @@ static void _{{stepfun.collName}}_remote({{
     s32 _xtag[] = { {{ util.coll2id(stepfun.collName) }}{% if stepfun.tag -%}
         {{ ", " ~ (stepfun.tag|join(", ")) }}
     {%- endif %} };
+    LOG_INFO("Remote prescribe {{stepfun.collName}}\n");
     hc_cnc_prescribe(_rank, _xtag, {{1+(stepfun.tag|count)}});
 }
 #endif
@@ -53,22 +55,12 @@ static void _{{stepfun.collName}}_remote({{
 void cncPrescribe_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True)
         }}{{g.name}}Ctx *ctx) {
-{% if not isFinalizer %}
-#ifdef HC_COMM
-    int _rank = {{ util.stepDistFn(stepfun) }};
-    if (_rank != HCMPI_COMM_RANK) {
-        LOG_INFO("Remote prescribe {{stepfun.collName}}\n");
-        _{{stepfun.collName}}_remote({{ util.print_tag(stepfun.tag) }}_rank);
-        return;
-    }
-    LOG_INFO("Local prescribe {{stepfun.collName}}\n");
-#endif
-{% endif %}
     {#- /* TODO - figure out if there's a way to compute the size of non-rectangular
            ranges (e.g. _i3={0.._i1}). Writing out a whole loop nest, and then
            letting the compiler optimize it away to a constant in the trivial
            (rectangular) case might be possible. */ #}
     //u64 _depc = {{stepfun.inputCountExpr}} + 1;
+    LOG_INFO("Local prescribe {{stepfun.collName}}\n");
 
     {#-/****** Set up input items *****/#}
     {% for input in stepfun.inputs %}
@@ -119,8 +111,35 @@ void cncPrescribe_{{stepfun.collName}}({{
     {{ util.log_msg("PRESCRIBED", stepfun.collName, stepfun.tag) }}
 }
 
+void cncPrescribeR_{{stepfun.collName}}({{
+        util.print_tag(stepfun.tag, typed=True)
+        }}{{g.name}}Ctx *ctx) {
 {% if not isFinalizer %}
 #ifdef HC_COMM
+    int _rank = {{ util.stepDistFn(stepfun) }};
+    if (_rank != HCMPI_COMM_RANK) {
+        _{{stepfun.collName}}_remote({{ util.print_tag(stepfun.tag) }}_rank);
+        return;
+    }
+#endif
+{% endif %}
+    {% if useHPT -%}
+    // DO AT ROOT
+    place_t * root_pl = (current_ws())->context->tuning_root;
+    async (root_pl) IN({{ util.print_tag(stepfun.tag) }}ctx) {
+    {% endif -%}
+        cncPrescribe_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
+    {% if useHPT -%}
+    }
+    {%- endif %}
+}
+
+{% if not isFinalizer %}
+#ifdef HC_COMM
+void cncPrescribeT_{{stepfun.collName}}(void *args) {
+    hc_cnc_xprescribe_local({{ util.coll2id(stepfun.collName) }}, args);
+}
+
 static void _cncPrescribeF_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True)
         }}{{g.name}}Ctx *ctx) {
@@ -136,22 +155,33 @@ static void _cncPrescribeF_{{stepfun.collName}}({{
 {% endfor %}
 
 #ifdef HC_COMM
-void hc_cnc_xprescribe_internal(void *msg) {
-    s32 *xtag = msg;
-    s32 coll = xtag[0];
+void hc_cnc_xprescribe_local(s32 coll, s32 *tag) {
     switch (coll) {
     {% for stepfun in g.stepFunctions.values() %}
         case {{ util.coll2id(stepfun.collName) }}: {
             _cncPrescribeF_{{stepfun.collName}}({% for x in stepfun.tag -%}
-                xtag[{{loop.index}}], {% endfor %}{{ util.globalCtx(g) }});
+                tag[{{loop.index0}}], {% endfor %}{{ util.globalCtx(g) }});
             break;
         }
     {% endfor %}
         default:
             ASSERT(!"Unreachable");
     }
-    // XXX - debugging
-    xtag[0] = 9999;
+}
+
+void hc_cnc_xprescribe_internal(void *msg) {
+    {% if useHPT -%}
+    // DO AT ROOT
+    place_t * root_pl = (current_ws())->context->tuning_root;
+    finish {
+    async (root_pl) IN(msg) {
+    {% endif -%}
+        s32 *xtag = msg;
+        hc_cnc_xprescribe_local(*xtag, xtag+1);
+    {% if useHPT -%}
+    }
+    }
+    {%- endif %}
 }
 #endif
 
