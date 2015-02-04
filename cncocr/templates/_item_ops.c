@@ -25,6 +25,17 @@ void cncPutChecked_{{i.collName}}(cncHandle_t _handle, {{
     {% else %}
     cncTag_t *_tag = NULL;
     {% endif %}
+#ifdef HC_COMM
+    int _rank = {{ util.itemDistFn(i) }};
+    if (_rank != HCMPI_COMM_RANK) {
+        LOG_INFO("Remote put {{i.collName}}\n");
+        hc_cnc_put(_rank, {{ util.coll2id(i.collName) }}, _tag, {{i.key|count}}, _handle, cncItemSize_{{i.collName}}(ctx));
+        return;
+    }
+    else {
+        LOG_INFO("Local put {{i.collName}}\n");
+    }
+#endif
     {% if not i.isVirtual -%}
     {#/*****NON-VIRTUAL*****/-#}
     {{ util.log_msg("PUT", i.collName, i.key) }}
@@ -49,16 +60,6 @@ void cncPutChecked_{{i.collName}}(cncHandle_t _handle, {{
         }}_checkSingleAssignment, ctx);
     {%- endif %}
     {%- endif %}
-#ifdef HC_COMM
-    int _rank = {{ util.itemDistFn(i) }};
-    if (_rank != HCMPI_COMM_RANK) {
-        LOG_INFO("Remote put {{i.collName}}\n");
-        hc_cnc_put(_rank, {{ util.coll2id(i.collName) }}, _tag, {{i.key|count}}, _handle, cncItemSize_{{i.collName}}(ctx));
-    }
-    else {
-        LOG_INFO("Local put {{i.collName}}\n");
-    }
-#endif
 }
 
 DDF_t *cncGet_{{i.collName}}({{ util.print_tag(i.key, typed=True) }}{{g.name}}Ctx *ctx) {

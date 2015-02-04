@@ -24,18 +24,18 @@ void *_cncUnpackRange(DDF_list_t *ddl) {
     return (void*)data;
 }
 
+#ifdef HC_COMM
+static int _done[1];
+static HCMPI_Status *_doneReq;
+void hc_cnc_xprescribe_local(s32 coll, s32 *tag);
+#endif 
+
 
 {% for stepfun in g.finalAndSteps %}
 #define {{ util.coll2id(stepfun.collName) }} {{ loop.index0 }}
 {%- endfor %}
 {% for stepfun in g.finalAndSteps %}
 {% set isFinalizer = loop.first -%}
-
-#ifdef HC_COMM
-static int _done[1];
-static HCMPI_Status *_doneReq;
-void hc_cnc_xprescribe_local(s32 coll, s32 *tag);
-#endif 
 
 {% if not isFinalizer %}
 #ifdef HC_COMM

@@ -3,12 +3,16 @@
 #define XTUNING_DISTRIBUTE_AMONG_CHILDREN(nNum, nName, aArray) {			\
 	int i, j, p;														\
 	place_t * pl = hc_get_current_place();								\
+ place_t * root_pl = (current_ws())->context->tuning_root;\
 	int chunk_size = nNum / pl->nChildren;								\
 	int chunk_rem = nNum % pl->nChildren;								\
 	i = 0; 																\
 	p = 0;																\
 	while (i < nNum) {													\
-         fprintf(stderr, "%d is pl\n", pl->nChildren);\
+         fprintf(stderr, "%p is root\n", root_pl);\
+         fprintf(stderr, "%p is pl0\n", (current_ws())->context->places[0]);\
+         fprintf(stderr, "%p is pl\n", pl);\
+         fprintf(stderr, "%d is pl->nChildren\n", pl->nChildren);\
 		place_t * ch = ((place_t *)pl->children[p])->tuning_place;		\
          fprintf(stderr, "%p is place\n", ch);\
 		int ub = (p < chunk_rem) ? i+chunk_size+1 : i+chunk_size;		\
@@ -34,10 +38,8 @@ void kComputeStep(cncTag_t k, CholeskyCtx *ctx) {
     for (j=0; j<numTU; j++) {
         childTags[j] = malloc(sizeof(cncTag_t)*2);
         childTags[j][0] = k;
-        childTags[j][1] = j;
+        childTags[j][1] = j+k+1;
     }
-    fprintf(stderr, "k=%d, n=%d\n", k, numTU);
-    finish {
-    XTUNING_DISTRIBUTE_AMONG_CHILDREN(numTU, cncPrescribeT_kjComputeStep, childTags);
-    }
+    //fprintf(stderr, "k=%d, n=%d\n", k, numTU);
+    TUNING_DISTRIBUTE_AMONG_CHILDREN(numTU, cncPrescribeT_kjComputeStep, childTags);
 }
