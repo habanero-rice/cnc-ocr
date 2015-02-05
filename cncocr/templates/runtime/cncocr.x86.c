@@ -106,6 +106,7 @@ bool _cncPut(void *item, unsigned char *tag, int tagLength, ItemCollectionEntry 
     /* Now, we have the correct placeholder (either inserted by us or by a Get function) */
 #ifdef HC_COMM
     entry->ddf.srcRank = srcRank;
+    entry->ddf.cancel = 1; // ddf.cancel actually means we have a local copy (for CnC)
 #endif
     CNC_DDF_PUT(&entry->ddf, item);
     LOG_INFO("Put into ddf=%p\n", &entry->ddf);

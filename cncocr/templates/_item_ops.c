@@ -77,8 +77,8 @@ DDF_t *cncGet_{{i.collName}}({{ util.print_tag(i.key, typed=True) }}{{g.name}}Ct
     {%- endif %}
 #ifdef HC_COMM
     int _rank = {{ util.itemDistFn(i) }};
-    // _ddf->cancel actually means it's already been requested (for CnC)
     if (_rank != HCMPI_COMM_RANK) {
+        // _ddf->cancel actually means it's already been requested (for CnC)
         if (!_ddf->cancel && !__sync_lock_test_and_set(&_ddf->cancel, 1)) {
             LOG_INFO("Remote get {{i.collName}}\n");
             hc_cnc_ddf_await(_rank, {{ util.coll2id(i.collName) }}, _tag, {{i.key|count}}, _ddf);

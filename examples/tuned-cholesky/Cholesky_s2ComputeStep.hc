@@ -24,6 +24,7 @@ void s2ComputeStep(cncTag_t k, cncTag_t j, LkjiItem LkjiA1D, LkjiItem LkjiB1D, C
                 LkjiA[ iB ][ jB ] -= LkjiB[ jB ][ kB ] * loBlock[ iB ][ kB ];
     }
 
+    // LOG_WARN("Putting to %d %d %d\n", j, k, k+1);
     cncPut_Lkji(loBlock_handle, j, k, k+1, ctx);
 
     int tagResult = (j)*(j+1)/2 + k;

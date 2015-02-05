@@ -24,7 +24,7 @@ CC_OPTS := -pthread -Wno-unknown-pragmas -g
 CFLAGS := -DOCR_ASSERT -O2 -I. -I.. -Icncocr_support -Wall $(CC_OPTS) $(HCC_FLAGS)
 
 include cncocr_support/Cholesky_defs.mk
-CFLAGS += $(HPTDEF)
+CFLAGS += $(HPTDEF) $(DEFS)
 
 CNC_RUNTIME_SRCS := cncocr_support/cncocr.c
 CNC_OP_SRCS := cncocr_support/Cholesky_item_ops.c cncocr_support/Cholesky_graph_ops.c
