@@ -10,7 +10,6 @@ argParser = argparse.ArgumentParser(prog="cncocr_t", description="Process CnC-OC
 argParser.add_argument('--log', action='store_true', help="turn on debug logging for CnC steps")
 argParser.add_argument('--platform', choices=['x86', 'ocr'], default='x86', help="target platform for the CnC-OCR runtime")
 argParser.add_argument('--full-make', action='store_true', help="Use the full OCR build system by default (changes the Makefile symlink)")
-argParser.add_argument('--hpt', action='store_true', help="use HPTs for tuning")
 argParser.add_argument('-t', help="optional tuning spec file")
 argParser.add_argument('specfile', help="CnC-OCR graph spec file")
 args = argParser.parse_args()
@@ -31,6 +30,7 @@ graphData = graph.CnCGraph(nameMatch.group('name'), graphAst)
 # Parse tuning data
 tuningAst = parser.cncTuningSpec.parseFile(args.t, parseAll=True) if args.t else None
 tuningData = graph.CnCTuningInfo(graphData, tuningAst)
+useHPT = bool(tuningData.tuningGroups)
 
 def makeDirP(path):
     if not os.path.exists(path):
@@ -42,8 +42,6 @@ makeDirP(supportSrcDir)
 makefilesDir = "./makefiles"
 makeDirP(makefilesDir)
 
-tgSrcDir = "./cncocr_support/tg_src"
-makeDirP(tgSrcDir)
 
 def makeLink(target, name):
     if os.path.islink(name):
@@ -60,7 +58,7 @@ def writeTemplate(templatepath, namepattern=None, overwrite=True, destdir=suppor
     outpath = "{0}/{1}".format(destdir, filename)
     if overwrite or not os.path.isfile(outpath):
         template = templateEnv.get_template(templatepath)
-        contents = template.render(g=graphData, targetStep=step, logEnabled=args.log, tuningInfo=tuningData, useHPT=args.hpt)
+        contents = template.render(g=graphData, targetStep=step, logEnabled=args.log, tuningInfo=tuningData, useHPT=useHPT)
         with open(outpath, 'w') as outfile:
             outfile.write(contents)
             outfile.close()
@@ -81,27 +79,16 @@ writeTemplate("_step_ops.hc", namepattern=prependedPattern)
 writeTemplate("_item_ops.c", namepattern=prependedPattern)
 writeArchTemplate("_graph_ops{0}.c", namepattern=prependedPattern)
 writeArchTemplate("_defs{0}.mk", namepattern=prependedPattern)
+if useHPT: writeTemplate("_tuning.hc", namepattern=prependedPattern)
 
 # Generate runtime files
 writeTemplate("runtime/cncocr_internal.h")
 writeArchTemplate("runtime/cncocr{0}.h")
 writeArchTemplate("runtime/cncocr{0}.c")
 
-# Makefiles
-makefileArgs = dict(destdir=makefilesDir, overwrite=False)
-writeTemplate("Makefile", namepattern="simple.mk", **makefileArgs)
-writeTemplate("makefiles/Makefile", namepattern="full.mk", **makefileArgs)
-for suffix in ["tg", "x86-pthread-x86", "x86-pthread-tg", "x86-pthread-mpi"]:
-    writeTemplate("makefiles/Makefile."+suffix, **makefileArgs)
-defaultMakefile = "full.mk" if args.full_make else "simple.mk"
-makeLink("{0}/{1}".format(makefilesDir, defaultMakefile), "Makefile") 
-
-# Support scripts
-writeTemplate("makeSourceLinks.sh")
-writeTemplate("makefiles/config.cfg", destdir=tgSrcDir)
-
 # Write files for user to edit
 userTemplateArgs=dict(overwrite=False, destdir=".")
+writeTemplate("Makefile", **userTemplateArgs)
 writeTemplate("_defs.h", namepattern=prependedPattern, **userTemplateArgs)
 writeTemplate("_itemInfo.h", namepattern=prependedPattern, **userTemplateArgs)
 writeTemplate("Graph.hc", namepattern="{gname}.hc", **userTemplateArgs)

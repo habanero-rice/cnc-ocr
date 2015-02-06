@@ -22,7 +22,7 @@ DDF_t *cncGet_{{name}}({{ util.print_tag(i.key, typed=True) }}{{g.name}}Ctx *con
  ******** STEP FUNCTIONS ********
 \********************************/
 
-{% for stepfun in g.finalAndSteps %}
+{% for stepfun in tuningInfo.steplikes %}
 
 #pragma hc continuable
 void {{stepfun.collName}}({{

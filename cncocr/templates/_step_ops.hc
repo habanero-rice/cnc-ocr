@@ -10,7 +10,6 @@
 {%- endwith -%}
 {%- endmacro -%}
 
-
 // XXX - assuming flat (1D) ranges
 void *_cncUnpackRange(DDF_list_t *ddl) {
     void **data = hc_malloc(sizeof(void*) * ddl->lsize);
@@ -31,10 +30,10 @@ void hc_cnc_xprescribe_local(s32 coll, s32 *tag);
 #endif 
 
 
-{% for stepfun in g.finalAndSteps %}
+{% for stepfun in tuningInfo.steplikes %}
 #define {{ util.coll2id(stepfun.collName) }} {{ loop.index0 }}
 {%- endfor %}
-{% for stepfun in g.finalAndSteps %}
+{% for stepfun in tuningInfo.steplikes %}
 {% set isFinalizer = loop.first -%}
 
 {% if not isFinalizer %}
@@ -52,7 +51,8 @@ static void _{{stepfun.collName}}_remote({{
 {% endif %}
 
 /* {{stepfun.collName}} task creation */
-void cncPrescribe_{{stepfun.collName}}({{
+#pragma hc continuable
+void cncPrescribeT_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True)
         }}{{g.name}}Ctx *ctx) {
     {#- /* TODO - figure out if there's a way to compute the size of non-rectangular
@@ -111,7 +111,10 @@ void cncPrescribe_{{stepfun.collName}}({{
     {{ util.log_msg("PRESCRIBED", stepfun.collName, stepfun.tag) }}
 }
 
-void cncPrescribeR_{{stepfun.collName}}({{
+#pragma hc continuable
+{#/* XXX - assuming all cncPrescribeR_* calls are made at
+     the tuning root node in the generated tuning code */#}
+void cncPrescribe{{ "R" if useHPT else "" }}_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True)
         }}{{g.name}}Ctx *ctx) {
 {% if not isFinalizer %}
@@ -124,29 +127,44 @@ void cncPrescribeR_{{stepfun.collName}}({{
 #endif
 {% endif %}
     {% if useHPT -%}
-    // DO AT ROOT
-    place_t * root_pl = (current_ws())->context->tuning_root;
-    async (root_pl) IN({{ util.print_tag(stepfun.tag) }}ctx) {
-    {% endif -%}
-        cncPrescribe_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
-    {% if useHPT -%}
+    // All "R" prescriptions are done at root when using HPTs
+    // XXX - duplicate code (see _cncPrescribeF_*)
+    place_t * _root_pl = (current_ws())->context->tuning_root
+    {%- if not tuningInfo.isTuningGroup(stepfun) -%}
+    {#-/* this gets you back to the non-tuning-tree */-#}
+    ->tuning_place
+    {%- endif %};
+    async (_root_pl) IN({{ util.print_tag(stepfun.tag) }}ctx) {
+        cncPrescribeT_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
     }
+    {% else -%}
+    cncPrescribeT_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
     {%- endif %}
 }
 
 {% if not isFinalizer %}
 #ifdef HC_COMM
-void cncPrescribeT_{{stepfun.collName}}(void *args) {
-    hc_cnc_xprescribe_local({{ util.coll2id(stepfun.collName) }}, args);
-}
-
 static void _cncPrescribeF_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True)
         }}{{g.name}}Ctx *ctx) {
     finish {
-        async IN({{ util.print_tag(stepfun.tag) }}ctx) {
-            cncPrescribe_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
+        {% if useHPT -%}
+        // XXX - shouldn't need this --  can't I do this from the comm worker?
+        // (i.e. put the xprescribe function's frame on the right deque)
+        // All remote prescriptions are done at root when using HPTs
+        place_t * _root_pl = (current_ws())->context->tuning_root
+        {%- if not tuningInfo.isTuningGroup(stepfun) -%}
+        {#-/* this gets you back to the non-tuning-tree */-#}
+        ->tuning_place
+        {%- endif %};
+        async (_root_pl) IN({{ util.print_tag(stepfun.tag) }}ctx) {
+            cncPrescribeT_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
         }
+        {% else -%}
+        async IN({{ util.print_tag(stepfun.tag) }}ctx) {
+            cncPrescribeT_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx);
+        }
+        {%- endif %}
     }
 }
 #endif
@@ -157,7 +175,7 @@ static void _cncPrescribeF_{{stepfun.collName}}({{
 #ifdef HC_COMM
 void hc_cnc_xprescribe_local(s32 coll, s32 *tag) {
     switch (coll) {
-    {% for stepfun in g.stepFunctions.values() %}
+    {% for stepfun in tuningInfo.steplikes[1:] %}
         case {{ util.coll2id(stepfun.collName) }}: {
             _cncPrescribeF_{{stepfun.collName}}({% for x in stepfun.tag -%}
                 tag[{{loop.index0}}], {% endfor %}{{ util.globalCtx(g) }});
@@ -170,18 +188,8 @@ void hc_cnc_xprescribe_local(s32 coll, s32 *tag) {
 }
 
 void hc_cnc_xprescribe_internal(void *msg) {
-    {% if useHPT -%}
-    // DO AT ROOT
-    place_t * root_pl = (current_ws())->context->tuning_root;
-    finish {
-    async (root_pl) IN(msg) {
-    {% endif -%}
-        s32 *xtag = msg;
-        hc_cnc_xprescribe_local(*xtag, xtag+1);
-    {% if useHPT -%}
-    }
-    }
-    {%- endif %}
+    s32 *xtag = msg;
+    hc_cnc_xprescribe_local(*xtag, xtag+1);
 }
 #endif
 

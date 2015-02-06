@@ -86,8 +86,8 @@ cncContext = CaselessLiteral("$context").suppress() + "{" + cExpr('fields') + "}
 # SCALAR TAG FUNCTION COMPONENTS
 # (used in tag functions)
 
-scalarExpr = notSpace(OneOrMore(CharsNotIn("()[]{},") | cSubExpr))
-scalarTC = Group(kind('SCALAR') + joined(scalarExpr)('expr'))
+scalarExpr = joined(notSpace(OneOrMore(CharsNotIn("()[]{},") | cSubExpr)))
+scalarTC = Group(kind('SCALAR') + scalarExpr('expr'))
 
 
 ##################################################
@@ -99,8 +99,13 @@ singleDotExpr = Regex(r"(\.?[^{}[\].])+")
 rangeSafeExpr = joined(OneOrMore(singleDotExpr | cSubExpr))
 rangeSafeExpr.leaveWhitespace()
 
-rangedTC = Group(kind('RANGED') + "{" + rangeSafeExpr('start') \
-                + ".." + rangeSafeExpr('end') + "}")
+oldRangedTC = Group(kind('RANGED') + "{" + rangeSafeExpr('start')
+                   + ".." + rangeSafeExpr('end') + "}")
+
+newRangedTC = Group(kind('RANGED') + CaselessLiteral("$range").suppress()
+                   + "(" + scalarExpr('start') + "," + scalarExpr('end') + ")")
+
+rangedTC = oldRangedTC | newRangedTC
 
 
 ##################################################
@@ -177,14 +182,18 @@ cncGraphSpec.ignore(cppStyleComment)
 
 distFn = joined(notSpace(OneOrMore(CharsNotIn("()[]{},") | cSubExpr)))
 
+tuningGroup = Group(stepDecl('step') + Optional("->" + instanceRefs('outputs')) + ";")
+
 itemTuning = Group("[" + cVar('collName') + ":" + tagDecl('key') + "]"
                   + ":" + "{" + distFn('distFn') + "}" + ";")
 
 stepTuning = Group("(" + cVar('collName') + ":" + tagDecl('tag') + ")"
                   + ":" + "{" + distFn('distFn') + "}" + ";")
 
-itemCollsTuning = ZeroOrMore(itemTuning)
-stepCollsTuning = ZeroOrMore(stepTuning)
-cncTuningSpec = itemCollsTuning('itemColls') + stepCollsTuning('stepColls')
+tuningGroups = ZeroOrMore(tuningGroup)
+iCollsTuning = ZeroOrMore(itemTuning)
+sCollsTuning = ZeroOrMore(stepTuning)
+
+cncTuningSpec = iCollsTuning('itemColls') + sCollsTuning('stepColls') + tuningGroups('groups')
 cncTuningSpec.ignore(cppStyleComment)
 

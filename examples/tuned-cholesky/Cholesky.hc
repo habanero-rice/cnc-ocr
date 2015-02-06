@@ -57,8 +57,8 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
     gettimeofday(&startTime, 0);
 #endif
 
-    // Prescribe "rootComputeStep" steps
-    cncPrescribe_rootComputeStep(ctx);
+    // Prescribe "kPrescriptions" steps
+    cncPrescribe_kPrescriptions(ctx);
 
     // Set finalizer function's tag
     int tileCount = ctx->numTiles * (ctx->numTiles + 1) / 2;

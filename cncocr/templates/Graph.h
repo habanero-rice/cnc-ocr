@@ -97,16 +97,31 @@ void cncPutCheckedR_{{name}}(cncHandle_t handle, {{
  ******** STEP PRESCRIPTIONS ********
 \************************************/
 
-{% for stepfun in g.finalAndSteps -%}
+{% for stepfun in tuningInfo.steplikes -%}
+{% if useHPT -%}
 #pragma hc continuable
-void cncPrescribeT_{{stepfun.collName}}(void *args);
+void cncPrescribeT_{{stepfun.collName}}({{
+        util.print_tag(stepfun.tag, typed=True) }}{{g.name}}Ctx *ctx);
 #pragma hc continuable
 void cncPrescribeR_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True) }}{{g.name}}Ctx *ctx);
+/* Normal prescribe is ignored for HPTs */
+#define cncPrescribe_{{stepfun.collName}}({{ util.print_tag(stepfun.tag) }}ctx) do {} while (0)
+{% else -%}
 #pragma hc continuable
 void cncPrescribe_{{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True) }}{{g.name}}Ctx *ctx);
+{% endif -%}
 {% endfor %}
+{% if useHPT -%}
+#define {{g.name}}_await(...) do {\
+    {{g.name}}_init_tuning(args, ctx);\
+    cncPrescribeT_{{g.finalizeFunction.collName}}(__VA_ARGS__);\
+} while (0)
+#pragma hc continuable
+void {{g.name}}_init_tuning({{g.name}}Args *args, {{g.name}}Ctx *ctx);
+{% else -%}
 #define {{g.name}}_await cncPrescribe_{{g.finalizeFunction.collName}}
+{% endif %}
 
 #endif /*{{defname}}*/

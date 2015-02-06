@@ -3,16 +3,11 @@ ifndef HC_HOME
 $(error Please define HC_HOME)
 endif
 
-# Try to be more compatible with the full makefiles
-ifndef ARGS
-ARGS:=$(WORKLOAD_ARGS)
-endif
-
 HCC ?= mpihcc
 
 ifeq "$(HCC)" "mpihcc"
 LIBHC := -lhccomm
-#LIBHC := ${HC_HOME}/lib/libhccomm.a
+LIBHC := ${HC_HOME}/lib/libhccomm.a
 CC := mpicc
 HCC_FLAGS := -DHC_COMM -DHC_MPI
 else
@@ -23,16 +18,16 @@ endif
 LD_FLAGS := -L${HC_HOME}/lib $(LIBHC) -lm -lxml2# -lpthread
 INCLUDE_FLAGS := -I${HC_HOME}/include/hc
 
-TARGET := {{g.name}}
+TARGET := Cholesky
 CC_OPTS := -pthread -Wno-unknown-pragmas
 CFLAGS := -DOCR_ASSERT -g -O2 -I. -I.. -Icncocr_support -Wall $(CC_OPTS) $(HCC_FLAGS)
 
-include cncocr_support/{{g.name}}_defs.mk
+include cncocr_support/Cholesky_defs.mk
 CFLAGS += $(HPTDEF)
 
 CNC_RUNTIME_SRCS := cncocr_support/cncocr.c
-CNC_OP_SRCS := cncocr_support/{{g.name}}_item_ops.c cncocr_support/{{g.name}}_graph_ops.c
-HC_SRCS := {{g.name}}.hc Main.hc cncocr_support/{{g.name}}_step_ops.hc $(CNC_STEP_SRCS)
+CNC_OP_SRCS := cncocr_support/Cholesky_item_ops.c cncocr_support/Cholesky_graph_ops.c
+HC_SRCS := Cholesky.hc Main.hc cncocr_support/Cholesky_step_ops.hc $(CNC_STEP_SRCS)
 SRCS := $(CNC_OP_SRCS) $(CNC_RUNTIME_SRCS)
 HC_OBJS := $(patsubst %.hc,%.o,$(HC_SRCS))
 OBJS := $(patsubst %.c,%.o,$(SRCS))
@@ -55,6 +50,10 @@ $(TARGET): $(ALL_OBJS)
 clean:
 	rm -f $(ALL_OBJS) $(TARGET) rose_*
 
+INSZ=50
+TSZ=25
+INFILE=/projects/vs3/cholesky-input/m_$(INSZ).in
+ARGS ?= $(INSZ) $(TSZ) $(INFILE)
 FULL_ARGS := $(HPT_ARGS) $(ARGS)
 
 run: compile

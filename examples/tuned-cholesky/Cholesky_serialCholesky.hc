@@ -4,7 +4,7 @@
  * typeof Lkji is double *
  */
 #pragma hc continuable
-void s1ComputeStep(cncTag_t k, LkjiItem Lkji1D, CholeskyCtx *ctx) {
+void serialCholesky(cncTag_t k, LkjiItem Lkji1D, CholeskyCtx *ctx) {
     int t = ctx->tileSize;
     double (*Lkji)[t] = (double(*)[t])Lkji1D;
 

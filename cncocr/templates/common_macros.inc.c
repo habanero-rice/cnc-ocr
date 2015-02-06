@@ -125,7 +125,7 @@ s64 {{idx}} = {{k.expr}};
     s64 {{ranges|join(", ", attribute=0)}};
 {%- for idx, x in ranges -%}
 {% call render_indented(loop.index) %}
-for ({{idx}} = 0; {{idx}} < {{x.sizeExpr}}; {{idx}}++) {
+for ({{idx}} = {{x.start}}; {{idx}} < {{x.end}}; {{idx}}++) {
 {%- endcall -%}
 {%- endfor -%}
 {% set content = caller(args, ranges|map('first')|list) -%}

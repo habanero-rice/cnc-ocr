@@ -4,7 +4,7 @@
  * typeof Lkji is double *
  */
 #pragma hc continuable
-void s3ComputeStep(cncTag_t k, cncTag_t j, cncTag_t i, LkjiItem LkjiA1D, LkjiItem LkjiB1D, LkjiItem LkjiC1D, CholeskyCtx *ctx) {
+void update(cncTag_t k, cncTag_t j, cncTag_t i, LkjiItem LkjiA1D, LkjiItem LkjiB1D, LkjiItem LkjiC1D, CholeskyCtx *ctx) {
     int t = ctx->tileSize;
     double (*LkjiA)[t] = (double(*)[t])LkjiA1D;
     double (*LkjiB)[t] = (double(*)[t])LkjiB1D;

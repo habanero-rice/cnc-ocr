@@ -46,7 +46,6 @@ typedef struct {
 } ocrEdtDep_t; // XXX - HC-MPI COMPAT
 
 {% block arch_typedefs -%}
-typedef ocrGuid_t cncItemCollection_t; // item collections
 {% endblock arch_typedefs %}
 /*************************************\
 ******** CNC HELPER FUNCTIONS ********
@@ -97,9 +96,6 @@ static __inline__ void CNC_CREATE_ITEM(cncHandle_t *handle, void **ptr, int ssiz
 ********* CNC COMPATIBILITY MACROS ********
 \*****************************************/
 {% block arch_compat_macros %}
-// XXX - re-enalbe these when we get pdMalloc from OCR
-//#define MALLOC pdMalloc
-//#define FREE   pdFree
 {% endblock arch_compat_macros %}
 
 {% if logEnabled %}

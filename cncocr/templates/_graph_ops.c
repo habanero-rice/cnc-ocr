@@ -36,16 +36,6 @@ void {{g.name}}_startDaemons({{g.name}}Ctx * ctx) {
     // initialize item collections
     {% call util.render_indented(1) -%}
 {% block arch_itemcoll_init scoped -%}
-s32 i;
-ocrGuid_t *itemTable;
-{% for i in g.concreteItems -%}
-{% if i.key -%}
-CNC_CREATE_ITEM(&context->_items.{{i.collName}}, (void**)&itemTable, sizeof(ocrGuid_t) * CNC_TABLE_SIZE);
-for (i=0; i<CNC_TABLE_SIZE; i++) itemTable[i] = NULL_GUID;
-{% else -%}
-ocrEventCreate(&context->_items.{{i.collName}}, OCR_EVENT_IDEM_T, true);
-{% endif -%}
-{% endfor -%}
 {% endblock arch_itemcoll_init -%}
     {% endcall %}
     // 
@@ -60,13 +50,6 @@ void {{g.name}}_destroy({{g.name}}Ctx *context) {
     // XXX - need to do a deep free by traversing the table
     {% call util.render_indented(1) -%}
 {% block arch_itemcoll_destroy -%}
-{% for i in g.concereteItems -%}
-{% if i.key -%}
-CNC_DESTROY_ITEM(context->_items.{{i.collName}});
-{% else -%}
-hc_free(context->_items.{{i.collName}});
-{% endif -%}
-{% endfor -%}
 {% endblock arch_itemcoll_destroy -%}
     {% endcall -%}
     //ocrDbDestroy(context->_guids.self);
@@ -81,10 +64,7 @@ hc_free(context->_items.{{i.collName}});
 // Rose-generated grossness
 typedef struct __hc_hc_cnc_xprescribe_internal__frame_t__ {
   struct hc_frameHeader header;
-  {% if useHPT %}
-  struct hc_finishState fscache[1];
-  place_t *root_pl;
-  {% endif %}
+  s32 *xtag;
   void *msg;
 } HC_PFrame;
 void __hc_hc_cnc_xprescribe_internal__(struct hc_workerState *ws,struct hc_frameHeader *__hc_frame__,int __hc_pc__);

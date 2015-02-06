@@ -1,0 +1,36 @@
+////////////////////////////////////////////////////////////////////////////////
+// Iteration-based tuning
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// item collection distributions
+
+[ Lkji: j, i, k ]: { j % $RANKS };
+[ results: i ]: { 0 };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group distributions
+
+( groupCTU: k ): { k % $RANKS }; // same as default (didn't really need this)
+( groupROW: j ): { j % $RANKS }; // same as default (didn't really need this)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group affinities
+
+( $INIT: () ) ->
+    ( groupCTU: $RANGE(0, #numTiles) ),
+    ( groupRow: $RANGE(1, #numTiles) );
+
+( groupCTU: k ) ->
+    ( serialCholesky: k );
+
+( groupRow: j ) ->
+    ( groupTU: $RANGE(0, j), j );
+
+( groupTU: k, j ) ->
+    ( trisolve:  k, j ),
+    ( update: k, j, $RANGE(k+1, j+1) );
+

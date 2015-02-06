@@ -198,9 +198,22 @@ class CnCTuningInfo(object):
         if ast:
             self.itemColls = dict([ (x.collName, x) for x in ast.itemColls ])
             self.stepColls = dict([ (x.collName, x) for x in ast.stepColls ])
+            self.tuningGroups = OrderedDict(
+                    (x.step.collName, StepFunction(x)) for x in ast.groups)
+            self.initTuning = self.tuningGroups.pop(initNameRaw)
         else:
             self.itemColls = {}
             self.stepColls = {}
+            self.tuningGroups = {}
+        self.steplikes = g.finalAndSteps + self.tuningGroups.values()
+        # verify
+        for g in self.tuningGroups.values():
+            for x in g.outputs:
+                if x.kind == 'ITEM':
+                    exit("Tuning groups can't put items")
+
+    def isTuningGroup(self, x):
+        return x.collName in self.tuningGroups.keys()
 
     def itemDistFn(self, collName, collID, numRanks):
         entry = self.itemColls.get(collName)
@@ -211,11 +224,15 @@ class CnCTuningInfo(object):
             distVar = coll.key[0] if coll.key else collID
             return  "{0} % {1}".format(distVar, numRanks)
 
+    def getFnDecl(self, collName):
+        return self.g.stepFunctions.get(collName,
+                self.tuningGroups.get(collName))
+
     def stepDistFn(self, collName, collID, numRanks):
         entry = self.stepColls.get(collName)
         if entry:
             return DistFn(entry.distFn, collID, numRanks)
         else:
-            coll = self.g.stepFunctions[collName]
+            coll = self.getFnDecl(collName)
             distVar = coll.tag[0] if coll.tag else collID
             return  "{0} % {1}".format(distVar, numRanks)
