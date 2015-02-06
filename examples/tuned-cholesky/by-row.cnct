@@ -13,21 +13,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 // compute group distributions
 
-( groupCTU: k ): { k % $RANKS }; // same as default (didn't really need this)
-( groupROW: j ): { j % $RANKS }; // same as default (didn't really need this)
+( groupCTU: j ): { j % $RANKS }; // same as default (didn't really need this)
 
 
 ////////////////////////////////////////////////////////////////////////////////
 // compute group affinities
 
 ( $INIT: () ) ->
-    ( groupCTU: $RANGE(0, #numTiles) ),
-    ( groupRow: $RANGE(1, #numTiles) );
+    ( groupCTU: $RANGE(0, #numTiles) );
 
-( groupCTU: k ) ->
-    ( serialCholesky: k );
-
-( groupRow: j ) ->
+( groupCTU: j ) ->
+    ( serialCholesky: j ),
     ( groupTU: $RANGE(0, j), j );
 
 ( groupTU: k, j ) ->
