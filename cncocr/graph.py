@@ -47,6 +47,7 @@ class StepRef(object):
         self.collName = stepRef.collName
         self.tag = map(makeTagComponent, tuple(stepRef.tag))
         self.tagRanges = tuple(x for x in self.tag if x.isRanged)
+        assert len(self.tagRanges) <= 1, "Only allow 1 ranged component"
 
 
 class ItemRef(object):
@@ -56,6 +57,7 @@ class ItemRef(object):
         self.key = map(makeTagComponent, tuple(itemRef.key))
         self.binding = binding
         self.keyRanges = tuple(x for x in self.key if x.isRanged)
+        assert len(self.keyRanges) <= 1, "Only allow 1 ranged component"
 
 
 class ItemDecl(object):
