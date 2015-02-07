@@ -108,7 +108,7 @@ s64 {{idx}} = {{k.expr}};
 
 {#/****** For-loop nest for iterating over a multi-dimentional
           item array based on a ranged tag function ******/#}
-{% macro render_io_nest(comment, tag, bindings) %}
+{% macro render_io_nest(comment, tag, bindings, initStatements="") %}
 {% set ranges = [] -%}
 {% set args = [] -%}
 {%- for x in tag -%}
@@ -123,6 +123,11 @@ s64 {{idx}} = {{k.expr}};
 {% if ranges -%}
 { // {{comment}}
     s64 {{ranges|join(", ", attribute=0)}};
+{%- if initStatements %}
+{%- call render_indented(1) %}
+{{ initStatements }}
+{%- endcall -%}
+{%- endif -%}
 {%- for idx, x in ranges -%}
 {% call render_indented(loop.index) %}
 for ({{idx}} = {{x.start}}; {{idx}} < {{x.end}}; {{idx}}++) {

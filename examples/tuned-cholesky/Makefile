@@ -50,8 +50,8 @@ $(TARGET): $(ALL_OBJS)
 clean:
 	rm -f $(ALL_OBJS) $(TARGET) rose_*
 
-INSZ=50
-TSZ=25
+INSZ=2000
+TSZ=125
 INFILE=/projects/vs3/cholesky-input/m_$(INSZ).in
 ARGS ?= $(INSZ) $(TSZ) $(INFILE)
 FULL_ARGS := $(HPT_ARGS) $(ARGS)

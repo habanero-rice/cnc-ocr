@@ -25,13 +25,41 @@ void {{groupfun.collName}}({{ util.print_tag(groupfun.tag, typed=True)
 {%- call util.render_indented(1) -%}
 {%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}
 {%- set decl = tuningInfo.getFnDecl(output.collName) -%}
-{%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag) -%}
-
-
-cncPrescribeT_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
-
-
+{% set isGroup = tuningInfo.isTuningGroup(decl) -%}
+{% set rangedOuts = groupfun.outputs|selectattr('tagRanges')|list -%}
+{% if isGroup and rangedOuts %}
+// DISTRIBUTE AMONG CHILDREN
+{%- set inits = ["place_t **_kids = hc_get_current_place()->children;\n"] -%}
+{% do inits.append("int _count = "~output.tagRanges[0].sizeExpr~";\n") -%}
+{% do inits.append("int _nKids =  hc_get_current_place()->nChildren;\n") -%}
+{% do inits.append("int _chunk_size = _count / _nKids;\n") -%}
+{% do inits.append("int _chunk_rem = _count % _nKids;\n") -%}
+{% do inits.append("if (_chunk_rem > 0) { _chunk_size += 1; }\n") -%}
+{% do inits.append("int _kidI = 0;\n") -%}
+{% set inits = "".join(inits) -%}
+{%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag, inits) -%}
+async (*_kids) IN({% for x in args %}{{x}}, {% endfor %}ctx) {
+    cncPrescribeT_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
+}
+if (++_kidI > _chunk_size) {
+    _kidI = 0;
+    _kids++;
+    if (--_chunk_rem == 0) { _chunk_size -= 1; }
+}
 {%- endcall -%}
+{% else -%}
+{%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag) -%}
+{% if isGroup -%}
+// PUSH DOWN
+async (hc_get_child_place()->tuning_place)
+{%- else -%}
+// RELEASE HERE
+async (hc_get_current_place())
+{%- endif %} IN({% for x in args %}{{x}}, {% endfor %}ctx) {
+    cncPrescribeT_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
+}
+{%- endcall -%}
+{% endif -%}
 {%- endcall %}
 {% endfor %}
 
