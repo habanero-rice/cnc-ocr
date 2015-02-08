@@ -47,7 +47,6 @@ class StepRef(object):
         self.collName = stepRef.collName
         self.tag = map(makeTagComponent, tuple(stepRef.tag))
         self.tagRanges = tuple(x for x in self.tag if x.isRanged)
-        assert len(self.tagRanges) <= 1, "Only allow 1 ranged component"
 
 
 class ItemRef(object):
@@ -57,7 +56,6 @@ class ItemRef(object):
         self.key = map(makeTagComponent, tuple(itemRef.key))
         self.binding = binding
         self.keyRanges = tuple(x for x in self.key if x.isRanged)
-        assert len(self.keyRanges) <= 1, "Only allow 1 ranged component"
 
 
 class ItemDecl(object):
@@ -107,6 +105,7 @@ class StepFunction(object):
         def isItem(x): return x.kind == 'ITEM'
         # Check all requrested bindings for repeats
         inputs = list(stepIO.inputs)
+        assert all(len(i.tagRanges) <= 1 for i in inputs), "Only allow 1 ranged component allowed in inputs"
         outputs = list(stepIO.outputs)
         allItems = inputs + filter(isItem, outputs)
         stepTag = list(stepIO.step.tag)
@@ -210,6 +209,9 @@ class CnCTuningInfo(object):
         self.steplikes = g.finalAndSteps + self.tuningGroups.values()
         # verify
         for g in self.tuningGroups.values():
+            for x in g.inputs:
+                if isTuningGroup(x) and not len(x.tagRanges) <= 1:
+                    exit("Only allow 1 ranged component allowed for tuning group references")
             for x in g.outputs:
                 if x.kind == 'ITEM':
                     exit("Tuning groups can't put items")
