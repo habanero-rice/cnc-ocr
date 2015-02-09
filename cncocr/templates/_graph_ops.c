@@ -3,6 +3,9 @@
 
 #include "{{g.name}}_internal.h"
 
+DDF_t *NULL_DDF;
+static long _null_ddf_payload;
+
 {{g.name}}Ctx *{{ util.globalCtx(g) }};
 
 #ifdef HC_COMM
@@ -17,6 +20,8 @@ void {{g.name}}_startDaemons({{g.name}}Ctx * ctx) {
 #endif
 
 {{g.name}}Ctx *{{g.name}}_create() {
+    NULL_DDF = DDF_CREATE();
+    DDF_PUT(NULL_DDF, &_null_ddf_payload);
 {% if logEnabled %}
     // init debug logger (only once)
     if (!cncDebugLog) {

@@ -39,9 +39,6 @@ def makeDirP(path):
 supportSrcDir = "./cncocr_support"
 makeDirP(supportSrcDir)
 
-makefilesDir = "./makefiles"
-makeDirP(makefilesDir)
-
 
 def makeLink(target, name):
     if os.path.islink(name):

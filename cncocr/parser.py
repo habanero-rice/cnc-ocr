@@ -1,13 +1,4 @@
-###########################################################################
-# WARNING!
-# This code monkey-patches the pyparsing module to make string literals
-# convert to Suppress rather than Literal by default.
-###########################################################################
-
 from pyparsing import *
-
-# Suppress string literals (see WARNING above)
-ParserElement.literalStringClass = Suppress
 
 
 ##################################################
@@ -54,7 +45,7 @@ cVar = Word("_"+alphas, "_"+alphanums)
 # C-style expressions
 cExpr = Forward() # forward-declaration
 cSubExpr = "(" + cExpr + ")" | "[" + cExpr + "]" | "{" + cExpr + "}"
-cExpr <<= ZeroOrMore(CharsNotIn("()[]{}") | cSubExpr) # concrete definition
+cExpr <<= joined(ZeroOrMore(CharsNotIn("()[]{}") | cSubExpr)) # concrete definition
 cExpr.leaveWhitespace()
 
 # Unit expression (zero-tuple, kind of like "void")
@@ -121,8 +112,11 @@ scalarTagExpr = rep1sep(scalarExpr)
 # ITEM INSTANCE REFERENCE
 # (used in step input/output relationships)
 
-itemRef = Group("[" + kind('ITEM') + Optional(cVar('binding') + "@") \
-               + cVar('collName') + ":" + tagExpr('key') + "]")
+whenClause = CaselessLiteral("$when") + "(" + cExpr('condition') + ")"
+
+itemRef = Group("[" + kind('ITEM') + Optional(cVar('binding') + "@")
+               + cVar('collName') + ":" + tagExpr('key')
+               + "]" + Optional(whenClause))
 
 
 ##################################################
@@ -170,7 +164,7 @@ stepRelation = Group(stepDecl('step') \
 # CNC GRAPH SPEC
 # (parses an entire spec file)
 
-graphCtx = Optional(joined(cncContext))
+graphCtx = Optional(cncContext)
 itemColls = ZeroOrMore(itemDecl)
 stepColls = OneOrMore(stepRelation)
 cncGraphSpec = graphCtx('ctx') + itemColls('itemColls') + stepColls('stepRels')

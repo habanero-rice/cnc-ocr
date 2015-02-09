@@ -23,6 +23,12 @@ void *_cncUnpackRange(DDF_list_t *ddl) {
     return (void*)data;
 }
 
+extern DDF_t *NULL_DDF;
+
+static inline void *_unpackDDF(DDF_t *ddf) {
+    return (ddf == NULL_DDF) ? NULL : (void*)ddf->datum;
+}
+
 #ifdef HC_COMM
 static int _done[1];
 static HCMPI_Status *_doneReq;
@@ -71,9 +77,10 @@ void cncPrescribeT_{{stepfun.collName}}({{
     {{ util.render_hc_gets_nest(comment, input) }}
     {% else -%}
     {#/*SCALAR*/-#}
-    DDF_t *{{input.binding}} = cncGet_{{input.collName}}(
+    DDF_t *{{input.binding}} = {% if input.condition -%}
+    ({{input.condition}}) ? {% endif %}cncGet_{{input.collName}}(
             {%- for k in input.key %}{{k.expr}}, {% endfor -%}
-            ctx);
+            ctx){% if input.condition %} : NULL_DDF{% endif %};
     {% endif %}
     {% endfor %}
 
@@ -88,9 +95,9 @@ void cncPrescribeT_{{stepfun.collName}}({{
                 {% if input.keyRanges -%}
                 _cncUnpackRange({{input.binding}}),
                 {% elif g.lookupType(input).isPtrType -%}
-                ({{input.collName}}Item){{input.binding}}->datum,
+                ({{input.collName}}Item)_unpackDDF({{input.binding}}),
                 {%- else -%}
-                *({{input.collName}}Item*){{input.binding}}->datum,
+                *({{input.collName}}Item*)_unpackDDF({{input.binding}}),
                 {%- endif %} {% endfor -%}
                 ctx);
         {{ util.log_msg("DONE", stepfun.collName, stepfun.tag) }}
@@ -194,6 +201,7 @@ void hc_cnc_xprescribe_internal(void *msg) {
 #endif
 
 void {{g.name}}_launch({{g.name}}Args *args, {{g.name}}Ctx *ctx) {
+    // Set up Null DDF for conditional inputs
 #ifdef HC_COMM
     {{g.name}}_startDaemons(ctx);
 #endif

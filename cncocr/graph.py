@@ -56,6 +56,11 @@ class ItemRef(object):
         self.key = map(makeTagComponent, tuple(itemRef.key))
         self.binding = binding
         self.keyRanges = tuple(x for x in self.key if x.isRanged)
+        self.raw_condition = itemRef.condition
+        if self.raw_condition:
+            assert not self.keyRanges, "Conditions on scalar inputs only"
+            self.raw_condition = self.raw_condition.strip()
+            self.condition = self.raw_condition.replace("@", "args->").replace("#", "ctx->")
 
 
 class ItemDecl(object):
@@ -180,7 +185,7 @@ class CnCGraph(object):
         self.finalizeFunction.collName = str(name)+"_finalize"
         self.finalAndSteps = [self.finalizeFunction] + self.stepFunctions.values()
         # context
-        self.ctxParams = filter(bool, map(strip, g.ctx.splitlines())) if g.ctx else []
+        self.ctxParams = filter(bool, map(strip, g.ctx.fields.splitlines())) if g.ctx else []
 
     def lookupType(self, item):
         return self.itemDeclarations[item.collName].type
