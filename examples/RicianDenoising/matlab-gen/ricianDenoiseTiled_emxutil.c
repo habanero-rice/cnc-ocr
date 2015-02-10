@@ -73,7 +73,10 @@ void emxEnsureCapacity(emxArray__common *emxArray, int32_T oldNumel, int32_T
   }
 
   if (newNumel > emxArray->allocatedSize) {
+#if 0
+    fprintf(stderr, "SIZE MISMATCH: %d vs %d\n", newNumel, emxArray->allocatedSize);
     assert(!"SHOULD NEVER RESIZE MATRICES IN THIS APP");
+#endif
     loop_ub = emxArray->allocatedSize;
     if (loop_ub < 16) {
       loop_ub = 16;

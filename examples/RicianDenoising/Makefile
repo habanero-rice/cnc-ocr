@@ -3,11 +3,6 @@ ifndef HC_HOME
 $(error Please define HC_HOME)
 endif
 
-# Try to be more compatible with the full makefiles
-ifndef ARGS
-ARGS:=$(WORKLOAD_ARGS)
-endif
-
 HCC ?= mpihcc
 
 ifeq "$(HCC)" "mpihcc"
@@ -63,8 +58,8 @@ clean:
 
 FULL_ARGS := $(HPT_ARGS) $(ARGS)
 
-run: compile
+run:
 	./$(TARGET) $(FULL_ARGS)
 
-gdb: compile
+gdb:
 	gdb -ex r --args ./$(TARGET) $(FULL_ARGS)
