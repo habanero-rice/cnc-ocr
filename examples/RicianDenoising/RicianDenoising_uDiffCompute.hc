@@ -1,4 +1,5 @@
 #include "RicianDenoising.h"
+#include "RicianDenoising_itemInfo.h"
 
 /*
  * typeof uData is void *
@@ -21,10 +22,10 @@ void uDiffCompute(cncTag_t iter, cncTag_t i, cncTag_t j, uDataItem U_cen, uDataI
     //
 
     // allocate space for results
-    emxArray_real_T *ut = emxCreate_real_T(blockSize, blockSize);
-    emxArray_real_T *ur = emxCreate_real_T(blockSize, blockSize);
-    emxArray_real_T *ud = emxCreate_real_T(blockSize, blockSize);
-    emxArray_real_T *ul = emxCreate_real_T(blockSize, blockSize);
+    emxArray_real_T *ut = createImageBlock(blockSize, ctx);
+    emxArray_real_T *ur = createImageBlock(blockSize, ctx);
+    emxArray_real_T *ud = createImageBlock(blockSize, ctx);
+    emxArray_real_T *ul = createImageBlock(blockSize, ctx);
 
 #if 0
     fprintf(stderr, "iter=%d, i=%d, j=%d\nbsz=%d, r=%d, c=%d\n",

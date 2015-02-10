@@ -7,6 +7,7 @@
 #include "{{g.name}}.h"
 
 {% for i in g.concreteItems -%}
+#define cncItemSanitizeFn_{{i.collName}} NULL
 static inline int cncItemSize_{{i.collName}}({{g.name}}Ctx *ctx) {
     return sizeof({{i.type.baseType}});
 }

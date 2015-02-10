@@ -1,4 +1,5 @@
 #include "RicianDenoising.h"
+#include "RicianDenoising_itemInfo.h"
 
 /*
  * typeof imageData is void *
@@ -23,7 +24,7 @@ void uCompute(cncTag_t iter, cncTag_t i, cncTag_t j, imageDataItem img_ij, ugDat
     if (!(j < tileCols)) { ug_rig = ug_cur; gr = gc; }
 
     // allocate space for results
-    emxArray_real_T *u = emxCreate_real_T(blockSize, blockSize);
+    emxArray_real_T *u = createImageBlock(blockSize, ctx);
 
     uStep(
       (real_T) i,

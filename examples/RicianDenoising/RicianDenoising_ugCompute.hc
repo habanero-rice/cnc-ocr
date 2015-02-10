@@ -1,4 +1,5 @@
 #include "RicianDenoising.h"
+#include "RicianDenoising_itemInfo.h"
 
 /*
  * typeof gData is void *
@@ -11,7 +12,7 @@ void ugCompute(cncTag_t iter, cncTag_t i, cncTag_t j, gDataItem gData, uDataItem
     double sigma2 = ctx->sigma2;
 
     // allocate space for results
-    emxArray_real_T *ug = emxCreate_real_T(blockSize, blockSize);
+    emxArray_real_T *ug = createImageBlock(blockSize, ctx);
 
     // call into matlab generated function
     ugStep(

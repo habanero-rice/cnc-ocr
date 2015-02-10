@@ -11,8 +11,8 @@ endif
 HCC ?= mpihcc
 
 ifeq "$(HCC)" "mpihcc"
-LIBHC := -lhccomm
-#LIBHC := ${HC_HOME}/lib/libhccomm.a
+#LIBHC := -lhccomm
+LIBHC := ${HC_HOME}/lib/libhccomm.a
 CC := mpicc
 HCC_FLAGS := -DHC_COMM -DHC_MPI
 else
@@ -20,7 +20,8 @@ LIBHC := -lhc
 CC := gcc
 HCC_FLAGS :=
 endif
-LD_FLAGS := ./matlab-gen/ricianDenoiseTiled.so -L${HC_HOME}/lib $(LIBHC) -lm -lxml2# -lpthread
+MATLAB_GEN_LIB := ./matlab-gen/ricianDenoiseTiled.so
+LD_FLAGS := $(MATLAB_GEN_LIB) -L${HC_HOME}/lib $(LIBHC) -lm -lxml2# -lpthread
 INCLUDE_FLAGS := -I${HC_HOME}/include/hc
 
 TARGET := RicianDenoising

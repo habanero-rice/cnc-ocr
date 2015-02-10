@@ -116,7 +116,7 @@ DDF_t *cncGet_{{i.collName}}({{ util.print_tag(i.key, typed=True) }}{{g.name}}Ct
 void {{g.name}}_startItemCollDaemons({{g.name}}Ctx * ctx) {
     {% for i in g.concreteItems -%}
     hc_mpi_cnc_ic_daemons(cncItemSize_{{i.collName}}(ctx), {{
-            i.key|count}}, {{util.coll2id(i.collName)}});
+            i.key|count}}, {{util.coll2id(i.collName)}}, cncItemSanitizeFn_{{i.collName}});
     {% endfor %}
 }
 

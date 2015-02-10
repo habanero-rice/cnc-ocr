@@ -1,4 +1,5 @@
 #include "RicianDenoising.h"
+#include "RicianDenoising_itemInfo.h"
 
 /*
  * typeof imageData is void *
@@ -11,7 +12,7 @@ void rCompute(cncTag_t iter, cncTag_t i, cncTag_t j, imageDataItem imgData, uDat
     double sigma2 = ctx->sigma2;
 
     // allocate space for results
-    emxArray_real_T *r = emxCreate_real_T(blockSize, blockSize);
+    emxArray_real_T *r = createImageBlock(blockSize, ctx);
 
     // call into matlab generated function
     rStep(

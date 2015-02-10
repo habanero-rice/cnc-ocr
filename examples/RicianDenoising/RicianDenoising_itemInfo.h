@@ -3,24 +3,31 @@
 
 #include "RicianDenoising.h"
 
+void *cncItemSanitizeFn_imageData(void *payload);
+emxArray_real_T *createImageBlock(int sideDim, RicianDenoisingCtx *ctx);
 static inline int cncItemSize_imageData(RicianDenoisingCtx *ctx) {
-    return sizeof(void);
+    size_t matrixSize = sizeof(double) * ctx->blockSize * ctx->blockSize;
+    size_t dimSize = sizeof(u32) * 2;
+    size_t structSize = sizeof(emxArray_real_T);
+    return structSize + matrixSize + dimSize;
 }
-static inline int cncItemSize_uDiffData(RicianDenoisingCtx *ctx) {
-    return sizeof(void);
-}
-static inline int cncItemSize_gData(RicianDenoisingCtx *ctx) {
-    return sizeof(void);
-}
-static inline int cncItemSize_rData(RicianDenoisingCtx *ctx) {
-    return sizeof(void);
-}
-static inline int cncItemSize_ugData(RicianDenoisingCtx *ctx) {
-    return sizeof(void);
-}
-static inline int cncItemSize_uData(RicianDenoisingCtx *ctx) {
-    return sizeof(void);
-}
+
+#define cncItemSanitizeFn_uDiffData cncItemSanitizeFn_imageData
+#define cncItemSize_uDiffData cncItemSize_imageData
+
+#define cncItemSanitizeFn_gData cncItemSanitizeFn_imageData
+#define cncItemSize_gData cncItemSize_imageData
+
+#define cncItemSanitizeFn_rData cncItemSanitizeFn_imageData
+#define cncItemSize_rData cncItemSize_imageData
+
+#define cncItemSanitizeFn_ugData cncItemSanitizeFn_imageData
+#define cncItemSize_ugData cncItemSize_imageData
+
+#define cncItemSanitizeFn_uData cncItemSanitizeFn_imageData
+#define cncItemSize_uData cncItemSize_imageData
+
+#define cncItemSanitizeFn_doneFlag NULL
 static inline int cncItemSize_doneFlag(RicianDenoisingCtx *ctx) {
     return sizeof(int);
 }

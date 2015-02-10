@@ -1,4 +1,5 @@
 #include "RicianDenoising.h"
+#include "RicianDenoising_itemInfo.h"
 
 struct timeval a, b;
 
@@ -11,7 +12,7 @@ void RicianDenoising_init(RicianDenoisingArgs *args, RicianDenoisingCtx *ctx) {
         s64 _i, _j;
         for (_i = 1; _i < ctx->numTileRows+1; _i++) {
             for (_j = 1; _j < ctx->numTileCols+1; _j++) {
-                emxArray_real_T *loopBlock = emxCreate_real_T(blockSize, blockSize);
+                emxArray_real_T *loopBlock = createImageBlock(blockSize, ctx);
                 // randomly initialize data, we do not care about column major order here
                 real_T *loopData = loopBlock->data;
                 int k;
@@ -56,5 +57,29 @@ void RicianDenoising_finalize(doneFlagItem *doneFlag, RicianDenoisingCtx *ctx) {
     gettimeofday(&b, 0);
     double secs = ((b.tv_sec - a.tv_sec)*1000000 + (b.tv_usec - a.tv_usec))/1000000.0;
     printf("The computation took %f seconds\n", secs);
+}
+
+void *cncItemSanitizeFn_imageData(void *payload) {
+    // Read parameters
+    emxArray_real_T *dataStruct = payload;
+    int numEntries = dataStruct->allocatedSize;
+    real_T *matrix = (real_T*)(dataStruct+1);
+    int32_T *dims = (int32_T*)(matrix+numEntries);
+    // Update pointers
+    dataStruct->data = matrix;
+    dataStruct->sizeX = dims;
+    return dataStruct;
+}
+
+emxArray_real_T *createImageBlock(int sideDim, RicianDenoisingCtx *ctx) {
+    size_t byteCount = cncItemSize_imageData(ctx);
+    emxArray_real_T *block = hc_malloc(byteCount);
+    block->numDimensions = 2;
+    block->allocatedSize = sideDim * sideDim;
+    cncItemSanitizeFn_imageData(block);
+    block->sizeX[0] = sideDim;
+    block->sizeX[1] = sideDim;
+    block->canFreeData = TRUE;
+    return block;
 }
 
