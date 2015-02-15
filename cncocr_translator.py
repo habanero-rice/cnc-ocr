@@ -7,11 +7,11 @@ templateEnv = Environment(loader=PackageLoader('cncocr'), extensions=['jinja2.ex
 
 # Arguments
 argParser = argparse.ArgumentParser(prog="cncocr_t", description="Process CnC-OCR graph spec.")
-argParser.add_argument('--log', action='store_true', help="turn on debug logging for CnC steps")
+argParser.add_argument('--debug', action='store_true', help="turn on single-thread debug logging for CnC steps (x86 only)")
+argParser.add_argument('--trace', action='store_true', help="turn on CnC event trace messages")
 argParser.add_argument('--affinities', action='store_true', help="use OCR affinities")
 argParser.add_argument('--platform', choices=['x86', 'ocr'], default='x86', help="target platform for the CnC-OCR runtime")
-argParser.add_argument('--full-make', action='store_true', help="Use the full OCR build system by default (changes the Makefile symlink)")
-argParser.add_argument('--fsim', action='store_true', help="alias of --platform=ocr --full-make")
+argParser.add_argument('--fsim', action='store_true', help="Generates FSim-specific files (implies --platform=ocr)")
 argParser.add_argument('--distributed', action='store_true', help="alias of --affinities --platform=ocr")
 argParser.add_argument('--intel', nargs='?', choices=['no', 'keep', 'overwrite'], default='no', help="create files for Intel(R) CnC (keep files or overwrite)")
 argParser.add_argument('specfile', nargs='?', default="", help="CnC-OCR graph spec file")
@@ -20,7 +20,6 @@ args = argParser.parse_args()
 # Handle aliases
 if args.fsim:
     args.platform='ocr'
-    args.full_make=True
 if args.distributed:
     args.platform='ocr'
     args.affinities=True
@@ -37,7 +36,11 @@ if not args.specfile:
 
 
 # Options
-graphOptions = dict(logEnabled=args.log, affinitiesEnabled=args.affinities)
+graphOptions = {
+    'logEnabled': args.debug,
+    'traceEnabled': args.trace,
+    'affinitiesEnabled': args.affinities
+}
 
 # Check spec file name
 nameMatch = re.match(r'^(.*/)?(?P<name>[a-zA-Z]\w*)(?P<cnc>\.cnc)?$', args.specfile)
@@ -56,9 +59,6 @@ def makeDirP(path):
 
 supportSrcDir = "./cncocr_support"
 makeDirP(supportSrcDir)
-
-makefilesDir = "./makefiles"
-makeDirP(makefilesDir)
 
 tgSrcDir = "./cncocr_support/tg_src"
 makeDirP(tgSrcDir)
@@ -110,27 +110,20 @@ if args.intel == 'no':
     writeArchTemplate("runtime/cncocr{arch}.h")
     writeArchTemplate("runtime/cncocr{arch}.c")
     
-    # Makefiles
-    makefileArgs = dict(destdir=makefilesDir, overwrite=False)
-    writeTemplate("Makefile", namepattern="simple.mk", **makefileArgs)
-    writeTemplate("makefiles/Makefile", namepattern="full.mk", **makefileArgs)
-    for suffix in ["tg", "x86-pthread-x86", "x86-pthread-tg", "x86-pthread-mpi"]:
-        writeTemplate("makefiles/Makefile."+suffix, **makefileArgs)
-    defaultMakefile = "full.mk" if args.full_make else "simple.mk"
-    makeLink("{0}/{1}".format(makefilesDir, defaultMakefile), "Makefile") 
-    
-    # Support scripts
-    writeTemplate("makeSourceLinks.sh")
-    writeTemplate("makefiles/config.cfg", destdir=tgSrcDir)
-    
     # Write files for user to edit
     userTemplateArgs=dict(overwrite=False, destdir=".")
     writeTemplate("_defs.h", namepattern=prependedPattern, **userTemplateArgs)
     writeTemplate("Graph.c", namepattern="{gname}.c", **userTemplateArgs)
     writeTemplate("Main.c", **userTemplateArgs)
+    writeTemplate("Makefile", **userTemplateArgs)
+    # steps
     stepArgs=dict(userTemplateArgs, namepattern="{gname}_{sname}.c")
     for stepName in graphData.stepFunctions.keys():
         writeTemplate("StepFunc.c", step=stepName, **stepArgs)
+    # FSim-only
+    if args.fsim:
+        writeTemplate("tg/Makefile.tg", **userTemplateArgs)
+        writeTemplate("tg/config.cfg", **userTemplateArgs)
 
 else: # intel CnC
     ow = False

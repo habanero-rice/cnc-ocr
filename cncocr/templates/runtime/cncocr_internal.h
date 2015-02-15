@@ -20,7 +20,11 @@ extern void *memcpy(void *dest, const void *src, size_t n);
 #    warning UNKNOWN PLATFORM (possibly unsupported)
 #endif
 
+#if CNCOCR_TG
+#define CNC_TABLE_SIZE 16
+#else
 #define CNC_TABLE_SIZE 512
+#endif
 
 #define SIMPLE_DBCREATE(guid, ptr, sz) ocrDbCreate(guid, ptr, sz, DB_PROP_NONE, NULL_GUID, NO_ALLOC)
 

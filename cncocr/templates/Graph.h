@@ -66,16 +66,13 @@ typedef struct { cncTag_t {{ i.key|join(", ") }}; } {{name}}ItemKey;
 \*****************************/
 {% for name, i in g.itemDeclarations.items() %}
 {{i.type.ptrType}}cncCreateItemSized_{{name}}(size_t size);
-{% if i.type.isPtrType -%}
 {# /* TODO - ADD NAMESPACE PREFIX DEFINE THING */ -#}
-static inline {{i.type.ptrType}}cncCreateItem_{{name}}(size_t count) {
-    return cncCreateItemSized_{{name}}(sizeof({{i.type.baseType}}) * count);
-}
-{% else -%}
 static inline {{i.type.ptrType}}cncCreateItem_{{name}}() {
     return cncCreateItemSized_{{name}}(sizeof({{i.type.baseType}}));
 }
-{% endif -%}
+static inline {{i.type.ptrType}}cncCreateItemVector_{{name}}(size_t count) {
+    return cncCreateItemSized_{{name}}(sizeof({{i.type.baseType}}) * count);
+}
 {% endfor %}
 /**************************\
  ******** ITEM PUT ********

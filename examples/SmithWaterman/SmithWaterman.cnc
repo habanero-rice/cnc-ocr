@@ -5,8 +5,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // item collection declarations
 
-[ int *above : i, j ];    // Last row of tile above
-[ int *left  : i, j ];    // Last column of tile to the left
+[ int above[] : i, j ];    // Last row of tile above
+[ int left[]  : i, j ];    // Last column of tile to the left
 [ SeqData *data : () ];    // Static data for the sequences and tile sizes
 [ struct timeval *startTime : () ]; // Only used for timing the computation
 

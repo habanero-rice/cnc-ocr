@@ -17,8 +17,12 @@ FILE *cncDebugLog;
 {% block arch_itemcoll_defs %}
 // XXX - depending on misc.h for HAL on FSim
 
-// XXX - increase this (I just wanted to set it small so I can see if it's working)
+#if CNCOCR_TG
+#define CNC_ITEMS_PER_BLOCK 8
+#else
 #define CNC_ITEMS_PER_BLOCK 64
+#endif
+
 #define CNC_ITEM_BLOCK_FULL(block) ((block)->count == CNC_ITEMS_PER_BLOCK)
 #define CNC_GETTER_GUID ((ocrGuid_t)-1)
 #define CNC_GETTER_ROLE 'G'
@@ -35,7 +39,7 @@ typedef struct {
     u32 slot;
     ocrDbAccessMode_t mode;
     u8 checkedFirst;
-    u8 role;
+    u64 role; // forcing tag[] to be 8-byte aligned (for FSim)
     u8 tag[];
 } ItemCollOpParams;
 

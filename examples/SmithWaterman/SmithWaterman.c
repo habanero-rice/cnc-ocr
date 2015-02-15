@@ -87,7 +87,7 @@ void SmithWaterman_init(SmithWatermanArgs *args, SmithWatermanCtx *ctx) {
     PRINTF("Imported %d x %d tiles.\n", ntw, nth);
 
     // Record starting time
-    struct timeval *startTime = cncCreateItem_startTime(1);
+    struct timeval *startTime = cncCreateItem_startTime();
     gettimeofday(startTime, 0);
     cncPut_startTime(startTime, ctx);
 

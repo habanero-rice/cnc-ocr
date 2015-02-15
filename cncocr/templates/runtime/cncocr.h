@@ -71,6 +71,7 @@ void cncAutomaticShutdown(ocrGuid_t doneEvent);
 #define OCR_ARGV(dep, i) getArgv(dep.ptr, i)
 
 #define CNC_SHUTDOWN_ON_FINISH(ctx) cncAutomaticShutdown((ctx)->_guids.doneEvent)
+#define CNC_SHUTDOWN_ON_FINALIZE(ctx) cncAutomaticShutdown((ctx)->_guids.finalizedEvent)
 
 /************************************************\
 ********* CNC ITEM MANAGEMENT FUNCTIONS *********
@@ -89,7 +90,7 @@ static const u64 _CNC_ITEM_META_SIZE = sizeof(ocrGuid_t);
 static inline void _cncItemCheckCookie(void *item) {
     #ifdef CNC_DEBUG
     if (item) {
-        u64 *data = item;
+        u64 *data = item; MAYBE_UNUSED(data);
         ASSERT(data[-1] == _CNC_ITEM_COOKIE && "Not a valid CnC item");
     }
     #endif
@@ -97,6 +98,7 @@ static inline void _cncItemCheckCookie(void *item) {
 
 static inline ocrGuid_t _cncItemGuid(void *item) {
     if (!item) return NULL_GUID;
+    _cncItemCheckCookie(item);
     u8 *data = item;
     return *(ocrGuid_t*)&data[-_CNC_ITEM_META_SIZE];
 }

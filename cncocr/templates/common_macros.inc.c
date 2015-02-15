@@ -15,7 +15,20 @@
             (['%ld'] * tag|count)|join(', ') if tag else 0 }}\n"{{
             ([""] + tag|list)|join(', ') }});
     fflush(cncDebugLog);
-{% endif -%}
+{% elif traceEnabled %}
+    PRINTF("<<CnC Trace>>: {{msgType}} {{collName}} @ {{
+           (['%ld'] * tag|count)|join(', ') if tag else 0 }}\n"{{
+           ([""] + tag|list)|join(', ') }});
+{% endif %}
+{%- endmacro %}
+
+{#/****** CnC Item Create call + variable declaration ******/#}
+{% macro item_create_statement(itemcoll, varname) -%}
+{% set suffix = "Vector" if itemcoll.type.isVecType else "" -%}
+{% set count = "/*TODO: count=*/1" if itemcoll.type.isVecType else "" -%}
+{% set vecSize = itemcoll.type.vecSize or count -%}
+{{itemcoll.type.ptrType ~ varname}} = cncCreateItem{{suffix}}_{{
+    itemcoll.collName}}({{vecSize}});
 {%- endmacro %}
 
 {#/****** Indent calling block to the specified level ******/#}
@@ -121,4 +134,24 @@ for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) 
 // {{comment}}
 {{ caller(args, ranges) }}
 {% endif -%}
+{%- endmacro %}
+
+{#/* Scaffolding code generation for step inputs */#}
+{% macro step_input_scaffolding(stepfun, indent=1) %}
+{% set rangedInputs = stepfun.inputs|selectattr('keyRanges')|list -%}
+{% if rangedInputs %}
+    //
+    // INPUTS
+    //
+{% for input in rangedInputs -%}
+{%- set comment = "Access \"" ~ input.binding ~ "\" inputs" -%}
+{%- set decl = g.itemDeclarations[input.collName] -%}
+{%- call util.render_indented(1) -%}
+{%- call(args, ranges) util.render_io_nest(comment, input.key, decl.key, zeroBased=True) -%}
+{%- set var = input.binding ~ util.print_indices(ranges) -%}
+/* TODO: Do something with {{var}} */
+{%- endcall -%}
+{%- endcall %}
+{% endfor %}
+{% endif %}
 {%- endmacro %}

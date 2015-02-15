@@ -91,7 +91,8 @@ static ocrGuid_t _graphFinishEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
         /*depc=*/EDT_PARAM_DEF, /*depv=*/&context->_guids.finalizedEvent,
         /*properties=*/EDT_PROP_NONE,
         /*affinity=*/NULL_GUID, /*outEvent=*/NULL);
-    ocrEdtTemplateDestroy(templGuid);
+    // XXX - destroying this template caused crash on FSim
+    //ocrEdtTemplateDestroy(templGuid);
     // Start graph execution
     {{g.name}}_init(args, context);
     if (args) ocrDbDestroy(depv[0].guid);

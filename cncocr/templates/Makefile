@@ -8,13 +8,13 @@ OCR_INSTALL=$(XSTACK_SRC)/ocr/install/$(OCR_TYPE)
 endif
 OCR_HOME=$(shell dirname `dirname $(OCR_INSTALL)`)
 
-# Try to be more compatible with the full makefiles
-ifndef ARGS
-ARGS:=$(WORKLOAD_ARGS)
-endif
+# Auto-parse arguments for "make run"
+WORKLOAD_INPUT_FILE_IDX := 0
+-include $(XSTACK_SRC)/apps/makefiles/make-pre.inc
 
 
 TARGET := {{g.name}}
+include cncocr_support/{{g.name}}_defs.mk
 
 # Distributed (MPI)
 ifeq "$(OCR_TYPE)" "x86-pthread-mpi"
@@ -26,10 +26,17 @@ MPI_FLAGS := -np $(OCR_NUM_NODES)
 else
 $(error Must specify either OCR_NODEFILE or OCR_NUM_NODES)
 endif
+CFG_NAME ?= mach-hc-dist-mpi-clone-2w-lockable.cfg
 RUN := mpirun $(MPI_FLAGS) ./$(TARGET)
-# Shared memory
+
+# Emulated TG
+else ifeq "$(OCR_TYPE)" "x86-pthread-mpi"
+CFG_NAME ?= jenkins-1block-lockableDB.cfg
+
+# Default (x86 shared memory)
 else
 CC := gcc
+CFG_NAME ?= mach-hc-8w-lockableDB.cfg
 RUN := ./$(TARGET)
 endif
 
@@ -37,25 +44,23 @@ CC_OPTS := -pthread
 LDFLAGS := -lm $(CC_OPTS)
 CFLAGS := -DCNC_DEBUG -g -O2 -I. -Icncocr_support -I$(OCR_INSTALL)/include -Wall $(CC_OPTS)
 
-include cncocr_support/{{g.name}}_defs.mk
 CNC_RUNTIME_SRCS := cncocr_support/cncocr.c
 CNC_OP_SRCS := $(patsubst %,cncocr_support/{{g.name}}_%_ops.c,step item graph)
 SRCS := Main.c {{g.name}}.c $(CNC_OP_SRCS) $(CNC_STEP_SRCS) $(CNC_RUNTIME_SRCS)
 OBJS := $(patsubst %.c,%.o,$(SRCS))
 
-CFG_NAME ?= default.cfg
 OCR_CONFIG ?= $(OCR_INSTALL)/config/$(CFG_NAME)
 OCR_AR=$(OCR_INSTALL)/lib/libocr.a
 
 compile: $(TARGET)
 
 # building source files
-%.o: %.c
+%.o: %.c | $(OCR_AR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # build the ocr runtime if needed
 $(OCR_AR):
-	echo $(OCR_HOME)
+	@echo OCR_HOME=$(OCR_HOME)
 	@[ -f "$(OCR_HOME)/ocr.dox" ] \
 		|| (echo "ERROR: Can't build OCR runtime (can't find OCR build directory)" && exit 1)
 	OCR_TYPE=$(OCR_TYPE) make -C $(OCR_HOME) install
@@ -69,7 +74,9 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 
 run: compile
-	OCR_CONFIG=$(OCR_CONFIG) $(RUN) $(ARGS)
+	OCR_CONFIG=$(OCR_CONFIG) $(RUN) $(WORKLOAD_ARGS)
 
 gdb: compile
-	OCR_CONFIG=$(OCR_CONFIG) gdb ./$(TARGET) -ex "r $(ARGS)"
+	OCR_CONFIG=$(OCR_CONFIG) gdb -ex r --args ./$(TARGET) $(WORKLOAD_ARGS)
+
+.PHONY: compile clean run gdb

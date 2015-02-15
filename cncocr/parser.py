@@ -65,6 +65,7 @@ cTypeStars = joined(ZeroOrMore(cStar))
 
 cType = cTypeBase('baseType') + cTypeStars('stars')
 
+cArraySuffix = Group("[" + cExpr('arraySize') + "]")
 
 ##################################################
 # Context struct fields declaration
@@ -136,7 +137,7 @@ inlineMapping = ":" + scalarTagExpr('keyFunc')
 mappingFunction = externalMapping | inlineMapping
 itemMapping = cVar('targetCollName') + mappingFunction
 
-cTypedVar = cType('type') + cVar('collName')
+cTypedVar = cType('type') + cVar('collName') + Optional(cArraySuffix)('vecSuffix')
 itemDecl = Group("[" + cTypedVar + ":" + tagDecl('key') \
                 + Optional("=" + itemMapping)('virtualMapping') \
                 + "]" + ";")

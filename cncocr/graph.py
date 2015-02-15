@@ -8,11 +8,14 @@ from ordereddict import OrderedDict
 
 class CType(object):
     """C-style data type"""
-    def __init__(self, typ):
+    def __init__(self, typ, arrayTyp):
         self.baseType = typ.baseType
         self.stars = typ.get('stars', "")
+        self.isVecType = bool(arrayTyp.vecSuffix)
+        if self.isVecType: self.stars += "*"
         self.isPtrType = bool(self.stars)
         self.ptrType = str(self) + ("" if self.isPtrType else "*")
+        self.vecSize = arrayTyp.arraySize
     def __str__(self):
         return "{0} {1}".format(self.baseType, self.stars)
 
@@ -73,7 +76,7 @@ class ItemRef(object):
 class ItemDecl(object):
     def __init__(self, itemDecl):
         self.collName = itemDecl.collName
-        self.type = CType(itemDecl.type)
+        self.type = CType(itemDecl.type, itemDecl)
         self.key = tuple(itemDecl.key)
         self.isSingleton = len(self.key) == 0
         self.isVirtual = False

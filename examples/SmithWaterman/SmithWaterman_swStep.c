@@ -43,14 +43,14 @@ void swStep(cncTag_t i, cncTag_t j, SeqData *data, int *above, int *left, SmithW
         }
     }
 
-    int *right = cncCreateItem_left(data->th+1);
+    int *right = cncCreateItemVector_left(data->th+1);
     for (index = 0; index <= data->th; index++) {
         right[index] = curr_tile[index][data->tw];
     }
     cncPut_left(right, i, j+1, ctx);
     ASSERT(above[data->tw] == right[0]);
 
-    int *below = cncCreateItem_above(data->tw+1);
+    int *below = cncCreateItemVector_above(data->tw+1);
     for (index = 0; index <= data->tw; index++) {
         below[index] = curr_tile[data->th][index];
     }
