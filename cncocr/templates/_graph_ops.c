@@ -165,3 +165,24 @@ void {{g.name}}_await({{
     {% endif -%}
     ocrEventSatisfy(ctx->_guids.awaitTag, _tagGuid);
 }
+
+#pragma weak cncMain
+int cncMain(int argc, char *argv[]) {
+    CNC_REQUIRE(0, "User should provide a custom cncMain function in Main.c.");
+    return 0;
+}
+
+#pragma weak mainEdt
+ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    // Unpack argc and argv (passed thru from mainEdt)
+    u64 *packedArgs = depv[0].ptr;
+    int i, argc = packedArgs[0];
+    char *argBytes = (char*)packedArgs;
+    char **argv = cncMalloc(sizeof(char*)*argc);
+    for (i=0; i<argc; i++) argv[i] = argBytes+packedArgs[i+1];
+    // Run user's cncEnvIn function
+    cncMain(argc, argv);
+    cncFree(argv);
+    return NULL_GUID;
+}
+

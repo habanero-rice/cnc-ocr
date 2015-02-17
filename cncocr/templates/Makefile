@@ -42,7 +42,8 @@ endif
 
 CC_OPTS := -pthread
 LDFLAGS := -lm $(CC_OPTS)
-CFLAGS := -DCNC_DEBUG -g -O2 -I. -Icncocr_support -I$(OCR_INSTALL)/include -Wall $(CC_OPTS)
+IFLAGS := -I. -Icncocr_support -I$(OCR_INSTALL)/include
+CFLAGS := $(IFLAGS) -DCNC_DEBUG -g -O2 -Wall $(CC_OPTS)
 
 CNC_RUNTIME_SRCS := cncocr_support/cncocr.c
 CNC_OP_SRCS := $(patsubst %,cncocr_support/{{g.name}}_%_ops.c,step item graph)

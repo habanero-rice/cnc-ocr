@@ -1,6 +1,6 @@
 #include "{{g.name}}.h"
 
-ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+int cncMain(int argc, char *argv[]) {
 
     // Create a new graph context
     {{g.name}}Ctx *context = {{g.name}}_create();
@@ -23,5 +23,5 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     // Exit when the graph execution completes
     CNC_SHUTDOWN_ON_FINISH(context);
 
-    return NULL_GUID;
+    return 0;
 }

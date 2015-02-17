@@ -17,8 +17,8 @@ $context {
 ////////////////////////////////////////////////////////////////////////////////
 // item collection declarations
 
-[ double *Lkji: j, i, k ];  // The input/intermediate matrix tiles
-[ double *results: i ];     // The result matrix tiles
+[ double Lkji[]: j, i, k ];  // The input/intermediate matrix tiles
+[ double results[]: i ];     // The result matrix tiles
 [ struct timeval *startTime : () ]; // Only used for timing the computation
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ $context {
 // Input from the caller: tile pointers, tile size and loop end value
 ( $init: () )
  -> [ startTime: () ],
-    [ Lkji: { 0 .. tileCount }, { 0 .. tileCount }, 0 ],
+    [ Lkji: $range(tileCount), $range(tileCount), 0 ],
     ( kComputeStep: () );
  
 // Return to the caller

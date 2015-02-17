@@ -1,14 +1,14 @@
 #include "EvenOddSums.h"
 
-ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
-    CNC_REQUIRE(OCR_MAIN_ARGC == 2, "Requires one argument N.\n");
+int cncMain(int argc, char *argv[]) {
+    CNC_REQUIRE(argc == 2, "Requires one argument N.\n");
 
     // Create a new graph context
     EvenOddSumsCtx *context = EvenOddSums_create();
 
     // Set up arguments for new graph instantiation
     EvenOddSumsArgs args = {
-        atoi(OCR_MAIN_ARGV(1))
+        atoi(argv[1])
     };
     
     // Launch the graph for execution
@@ -17,5 +17,5 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     // Exit when the graph execution completes
     CNC_SHUTDOWN_ON_FINISH(context);
 
-    return NULL_GUID;
+    return 0;
 }

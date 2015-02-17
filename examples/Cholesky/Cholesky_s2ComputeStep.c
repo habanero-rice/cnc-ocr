@@ -9,7 +9,7 @@ void s2ComputeStep(cncTag_t k, cncTag_t j, double *LkjiA1D, double *LkjiB1D, Cho
     double (*LkjiB)[t] = (double(*)[t])LkjiB1D;
 
     // Allocate new tile
-    double *loBlock1D = cncCreateItem_Lkji(t*t);
+    double *loBlock1D = cncCreateItemVector_Lkji(t*t);
     double (*loBlock)[t] = (double(*)[t])loBlock1D;
 
     int kB, iB, jB;

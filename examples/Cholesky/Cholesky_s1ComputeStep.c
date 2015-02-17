@@ -10,7 +10,7 @@ void s1ComputeStep(cncTag_t k, double *Lkji1D, CholeskyCtx *ctx) {
     double (*Lkji)[t] = (double(*)[t])Lkji1D;
 
     // Allocate new tile
-    double *lBlock1D = cncCreateItem_Lkji(t*t);
+    double *lBlock1D = cncCreateItemVector_Lkji(t*t);
     double (*lBlock)[t] = (double(*)[t])lBlock1D;
 
     // Calculate tile values

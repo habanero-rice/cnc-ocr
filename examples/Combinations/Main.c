@@ -1,6 +1,6 @@
 #include "Combinations.h"
 
-ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+int cncMain(int argc, char *argv[]) {
 
     // Create a new graph context
     CombinationsCtx *context = Combinations_create();
@@ -9,8 +9,8 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
 
     // TODO: initialize graph context parameters
     // u32 n, k;
-    context->n = atoi(OCR_MAIN_ARGV(1));
-    context->k = atoi(OCR_MAIN_ARGV(2));
+    context->n = atoi(argv[1]);
+    context->k = atoi(argv[2]);
 
     // Launch the graph for execution
     Combinations_launch(&args, context);
@@ -18,5 +18,5 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     // Exit when the graph execution completes
     CNC_SHUTDOWN_ON_FINISH(context);
     
-    return NULL_GUID;
+    return 0;
 }

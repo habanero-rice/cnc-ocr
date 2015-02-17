@@ -35,7 +35,7 @@ typedef struct {{g.name}}Context {
 {%- endfor %}
 } {{g.name}}Ctx;
 {# /* TODO - Use a GUID instead of a pointer to the context */ #}
-{{g.name}}Ctx *{{g.name}}_create();
+{{g.name}}Ctx *{{g.name}}_create(void);
 void {{g.name}}_destroy({{g.name}}Ctx *context);
 
 void {{g.name}}_launch({{g.name}}Args *args, {{g.name}}Ctx *ctx);
@@ -67,7 +67,7 @@ typedef struct { cncTag_t {{ i.key|join(", ") }}; } {{name}}ItemKey;
 {% for name, i in g.itemDeclarations.items() %}
 {{i.type.ptrType}}cncCreateItemSized_{{name}}(size_t size);
 {# /* TODO - ADD NAMESPACE PREFIX DEFINE THING */ -#}
-static inline {{i.type.ptrType}}cncCreateItem_{{name}}() {
+static inline {{i.type.ptrType}}cncCreateItem_{{name}}(void) {
     return cncCreateItemSized_{{name}}(sizeof({{i.type.baseType}}));
 }
 static inline {{i.type.ptrType}}cncCreateItemVector_{{name}}(size_t count) {

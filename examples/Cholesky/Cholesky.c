@@ -28,7 +28,7 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
     for (i = 0; i < nt; i++){
         for (j = 0 ; j <= i ; j++ ) {
             int A_i, A_j, T_i, T_j;
-            double *temp1D = cncCreateItem_Lkji(t*t);
+            double *temp1D = cncCreateItemVector_Lkji(t*t);
             // The 1D array of tile entries maps to a
             // 2D array corresponding to a t-by-t matrix tile
             double (*temp)[t] = (double(*)[t])temp1D;
@@ -47,7 +47,7 @@ void Cholesky_init(CholeskyArgs *args, CholeskyCtx *ctx) {
 
     // Record starting time
 #if CNCOCR_x86
-    struct timeval *startTime = cncCreateItem_startTime(1);
+    struct timeval *startTime = cncCreateItem_startTime();
     gettimeofday(startTime, 0);
 #else
     struct timeval *startTime = NULL;

@@ -7,7 +7,7 @@
 
 typedef struct CholeskyArguments {
     // Path to input matrix file
-    const char *inFile;
+    char inFile[256];
 } CholeskyArgs;
 
 #endif /*_CNCOCR_CHOLESKY_TYPES_H_*/
