@@ -155,3 +155,10 @@ for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) 
 {% endfor %}
 {% endif %}
 {%- endmacro %}
+
+{% macro step_enter() -%}
+{% if logEnabled %}pthread_mutex_lock(&_cncDebugMutex);{% endif %}
+{%- endmacro %}
+{% macro step_exit() -%}
+{% if logEnabled %}pthread_mutex_unlock(&_cncDebugMutex);{% endif %}
+{%- endmacro %}

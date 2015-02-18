@@ -19,5 +19,5 @@ fi
 # The md5 checksum of the expected output for the 2000x2000 input matrix
 CHKSUM='18ad5f78c6076b565970dd3fe82172c8  Cholesky.out'
 
-make run ARGS="2000 ${TILE:-125} $INPATH/m_2000.in" && echo $CHKSUM | $MD5BIN -c -
+make run WORKLOAD_ARGS="2000 ${TILE:-125} $INPATH/m_2000.in" && echo $CHKSUM | $MD5BIN -c -
 

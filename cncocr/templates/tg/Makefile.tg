@@ -81,7 +81,7 @@ APP_SRCS := Main.c {{g.name}}.c
 # Additional CFLAGS. By default, it includes
 # all OCR required includes and apps/libs/<target>/include
 # TG_ARCH is also defined for Fsim
-CFLAGS := -I$(WORKLOAD_SRC)/cncocr_support
+CFLAGS := -I$(WORKLOAD_SRC) -I$(WORKLOAD_SRC)/cncocr_support
 
 # Additional LDFLAGS. By default, it includes
 # the required OCR library path and apps/libs/<target/lib

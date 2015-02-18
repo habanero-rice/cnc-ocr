@@ -13,6 +13,14 @@
 {%- endwith -%}
 {%- endmacro -%}
 
+{% if logEnabled %}
+#ifndef CNCOCR_x86
+#error "Debug logging mode only supported on x86 targets"
+#endif
+#include <pthread.h>
+extern pthread_mutex_t _cncDebugMutex;
+{% endif -%}
+
 {% for stepfun in g.finalAndSteps %}
 {% set isFinalizer = loop.first -%}
 {% set paramTag = (stepfun.tag|count) <= 8 -%}
@@ -52,6 +60,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     {{input.binding}} = {{unpack_item(input)}}_cncItemDataPtr(depv[_edtSlot++].ptr);
     {% endif -%}
     {% endfor %}
+    {{ util.step_enter() }}
     // Call user-defined step function
     {{ util.log_msg("RUNNING", stepfun.collName, stepfun.tag) }}
     {{stepfun.collName}}({{ util.print_tag(stepfun.tag) ~ util.print_bindings(stepfun.inputs) }}ctx);
@@ -66,6 +75,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     {% endif -%}
     {% endfor -%}
     {{ util.log_msg("DONE", stepfun.collName, stepfun.tag) }}
+    {{ util.step_exit() }}
     return NULL_GUID;
 }
 

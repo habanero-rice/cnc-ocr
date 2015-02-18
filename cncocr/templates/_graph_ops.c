@@ -3,6 +3,14 @@
 
 #include "{{g.name}}_internal.h"
 
+{% if logEnabled %}
+#ifndef CNCOCR_x86
+#error "Debug logging mode only supported on x86 targets"
+#endif
+#include <pthread.h>
+pthread_mutex_t _cncDebugMutex = PTHREAD_MUTEX_INITIALIZER;
+{% endif -%}
+
 {{g.name}}Ctx *{{g.name}}_create() {
 {% if logEnabled %}
     // init debug logger (only once)
@@ -94,7 +102,9 @@ static ocrGuid_t _graphFinishEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
     // XXX - destroying this template caused crash on FSim
     //ocrEdtTemplateDestroy(templGuid);
     // Start graph execution
+    {{ util.step_enter() }}
     {{g.name}}_init(args, context);
+    {{ util.step_exit() }}
     if (args) ocrDbDestroy(depv[0].guid);
     return NULL_GUID;
 }
@@ -166,11 +176,10 @@ void {{g.name}}_await({{
     ocrEventSatisfy(ctx->_guids.awaitTag, _tagGuid);
 }
 
-#pragma weak cncMain
-int cncMain(int argc, char *argv[]) {
-    CNC_REQUIRE(0, "User should provide a custom cncMain function in Main.c.");
-    return 0;
-}
+/* define NO_CNC_MAIN if you want to use mainEdt as the entry point instead */
+#ifndef NO_CNC_MAIN
+
+extern int cncMain(int argc, char *argv[]);
 
 #pragma weak mainEdt
 ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
@@ -185,4 +194,6 @@ ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     cncFree(argv);
     return NULL_GUID;
 }
+
+#endif /* NO_CNC_MAIN */
 

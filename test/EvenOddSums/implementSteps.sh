@@ -8,8 +8,7 @@ s`/.TODO./0`i*2 + 1`;
 }' EvenOddSums.c
 
 sed -i '{
-s`ocrGuid_t mainEdt.*`&\n    CNC_REQUIRE(OCR_MAIN_ARGC == 2, "Requires one argument N.\\n");`;
-s`// TODO: initialize custom arguments`atoi(OCR_MAIN_ARGV(1))`;
+s`// TODO: initialize custom arguments`20`;
 / Note that you should define the members of/d;
 / this struct by editing EvenOddSums_defs.h./d;
 }' Main.c
