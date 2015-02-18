@@ -184,11 +184,9 @@ extern int cncMain(int argc, char *argv[]);
 #pragma weak mainEdt
 ocrGuid_t mainEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
     // Unpack argc and argv (passed thru from mainEdt)
-    u64 *packedArgs = depv[0].ptr;
-    int i, argc = packedArgs[0];
-    char *argBytes = (char*)packedArgs;
+    int i, argc = OCR_MAIN_ARGC;
     char **argv = cncMalloc(sizeof(char*)*argc);
-    for (i=0; i<argc; i++) argv[i] = argBytes+packedArgs[i+1];
+    for (i=0; i<argc; i++) argv[i] = OCR_MAIN_ARGV(i);
     // Run user's cncEnvIn function
     cncMain(argc, argv);
     cncFree(argv);

@@ -60,9 +60,6 @@ def makeDirP(path):
 supportSrcDir = "./cncocr_support"
 makeDirP(supportSrcDir)
 
-tgSrcDir = "./cncocr_support/tg_src"
-makeDirP(tgSrcDir)
-
 def makeLink(target, name):
     if os.path.islink(name):
         os.remove(name)
