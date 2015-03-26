@@ -64,6 +64,7 @@ static ocrGuid_t _itemBlockCreate(u32 tagLength, ocrGuid_t next, ItemBlock **out
     block->count = 0;
     block->next = next;
     *out = block;
+    ocrDbRelease(blockGuid);
     return blockGuid;
 }
 
@@ -349,6 +350,7 @@ static void _itemCollUpdate(ocrGuid_t coll, u8 *tag, u32 tagLength, u8 role, ocr
     {%- else -%}
     params->affinity = NULL_GUID;
     {%- endif %}
+    ocrDbRelease(paramsGuid);
     // edt
     ocrGuid_t hashEdtGuid, templGuid;
     ocrEdtTemplateCreate(&templGuid, _doHashEdt, 0, 2);

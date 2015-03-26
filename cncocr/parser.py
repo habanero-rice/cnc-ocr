@@ -65,13 +65,13 @@ cTypeStars = joined(ZeroOrMore(cStar))
 
 cType = cTypeBase('baseType') + cTypeStars('stars')
 
-cArraySuffix = Group("[" + cExpr('arraySize') + "]")
+cArraySuffix = "[" + cExpr('arraySize') + "]"
 
 ##################################################
 # Context struct fields declaration
 # (used to add custom parameters to the context)
 
-cncContext = CaselessLiteral("$context").suppress() + Suppress("{")\
+cncContext = CaselessKeyword("$context").suppress() + Suppress("{")\
            + cExpr('fields') + Suppress("}") + Suppress(";")
 
 
@@ -104,7 +104,7 @@ oldRangeExpr = "{" + rangeSafeExpr('start') + ".." + rangeSafeExpr('end') + "}"
 oldRangeExpr.addParseAction(deprecatedRangeSyntaxWarning)
 
 # Newer-style range functions
-rangeFn = CaselessLiteral("$rangeTo")('inclusive') | CaselessLiteral("$range")
+rangeFn = CaselessKeyword("$rangeTo")('inclusive') | CaselessKeyword("$range")
 rangeExpr = rangeFn + "(" + Optional(scalarExpr('start') + ",") + scalarExpr('end') + ")"
 
 rangedTC = Group(kind('RANGED') + (rangeExpr | oldRangeExpr))
@@ -132,7 +132,7 @@ itemRef = Group("[" + kind('ITEM') + Optional(cVar('binding') + "@") \
 
 # mappings from virtual to concrete item collections can be
 # specified by a function name, or inline as a tag expression
-externalMapping = CaselessLiteral("using") + cVar('funcName')
+externalMapping = CaselessKeyword("using") + cVar('funcName')
 inlineMapping = ":" + scalarTagExpr('keyFunc')
 mappingFunction = externalMapping | inlineMapping
 itemMapping = cVar('targetCollName') + mappingFunction
@@ -152,18 +152,39 @@ stepRef = Group("(" + kind('STEP') + cVar('collName') \
 
 
 ##################################################
+# I/O CONDITIONALS
+# (used to predicate a step's input or output)
+
+# Helpers
+kwIf = CaselessKeyword("$if") + kind('IF')
+kwElse = CaselessKeyword("$else") + kind('ELSE')
+kwWhen = CaselessKeyword("$when") + kind('IF')
+instanceRef = itemRef | stepRef
+
+def condBlock(ref):
+    refBlock = "{" + rep1sep(ref)('refs') + "}"
+    cond = "(" + cExpr('cond') + ")"
+    return Group(kwIf + cond + refBlock) + Optional(Group(kwElse + refBlock)) \
+         | Group(Group(ref)('refs') + (kwWhen + cond | kind('ALWAYS')))
+
+condItemRefs = rep1sep(condBlock(itemRef))
+condInstanceRefs = rep1sep(condBlock(instanceRef))
+
+
+##################################################
 # STEP I/O RELATIONSHIPS
 # (specifies tag functions for a step collection)
 
+# make $init and $initialize equivalent
+initFnName =  CaselessKeyword("$init") | CaselessKeyword("$initialize").suppress() + InjectToken("$init")
+
 # Helpers for parsing references to other items/steps
-itemRefs     = rep1sep(itemRef)
-instanceRefs = rep1sep(itemRef | stepRef)
-stepName = cVar | CaselessLiteral("$init") | CaselessLiteral("$finalize")
+stepName = cVar | initFnName | CaselessKeyword("$finalize")
 stepDecl = Group("(" + stepName('collName') + ":" + tagDecl('tag') + ")")
 
 stepRelation = Group(stepDecl('step') \
-                    + Optional("<-" + itemRefs('inputs')) \
-                    + Optional("->" + instanceRefs('outputs')) + ";")
+                    + Optional("<-" + condItemRefs('inputs')) \
+                    + Optional("->" + condInstanceRefs('outputs')) + ";")
                     # TODO - Allow multiple out-clauses, each with a predicate
 
 

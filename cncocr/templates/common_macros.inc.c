@@ -68,7 +68,7 @@
      (especially now since I lifted out the memory allocation stuff) */#}
 {#/****** For-loop nest for iterating over a multi-dimentional
           item array based on a ranged tag function ******/#}
-{% macro render_tag_nest(comment, item) %}
+{% macro render_tag_nest(comment, item, useTag=False) %}
 {% set ranges = [] -%}
 {% macro iVarIndexed() %}{{item.binding ~ ranges|join}}{% endmacro -%}
 { // {{comment}}
@@ -79,7 +79,7 @@
 s64 {{idx}};
 for ({{idx}} = {{k.start}}; {{idx}} {{range_cmp_op(k)}} {{k.end}}; {{idx}}++) {
 {%- do ranges.append("["~idx~"]") -%}
-{%- else %}{#/* Scalar */#}
+{%- elif useTag %}{#/* Scalar (if used) */#}
 s64 {{idx}} = {{k.expr}};
 {%- endif -%}
 {%- endcall -%}
@@ -130,7 +130,7 @@ for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) 
 {%- endcall -%}
 {%- endfor %}
 }
-{%- else -%}
+{% else -%}
 // {{comment}}
 {{ caller(args, ranges) }}
 {% endif -%}
@@ -146,9 +146,9 @@ for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) 
 {% for input in rangedInputs -%}
 {%- set comment = "Access \"" ~ input.binding ~ "\" inputs" -%}
 {%- set decl = g.itemDeclarations[input.collName] -%}
-{%- call util.render_indented(1) -%}
-{%- call(args, ranges) util.render_io_nest(comment, input.key, decl.key, zeroBased=True) -%}
-{%- set var = input.binding ~ util.print_indices(ranges) -%}
+{%- call render_indented(1) -%}
+{%- call(args, ranges) render_io_nest(comment, input.key, decl.key, zeroBased=True) -%}
+{%- set var = input.binding ~ print_indices(ranges) -%}
 /* TODO: Do something with {{var}} */
 {%- endcall -%}
 {%- endcall %}
@@ -162,3 +162,50 @@ for ({{idx}} = {{startVal}}; {{idx}} {{range_cmp_op(x)}} {{endVal}}; {{idx}}++) 
 {% macro step_exit() -%}
 {% if logEnabled %}pthread_mutex_unlock(&_cncDebugMutex);{% endif %}
 {%- endmacro %}
+
+{% macro render_step_outputs(outputs) -%}
+{% for output in outputs recursive -%}
+{% if output.kind == 'ITEM' -%}
+{%- set comment = "Put \"" ~ output.binding ~ "\" items" -%}
+{%- set decl = g.itemDeclarations[output.collName] -%}
+{%- call(args, ranges) render_io_nest(comment, output.key, decl.key) -%}
+{%- set var = output.binding ~ print_indices(ranges) -%}
+{{ item_create_statement(decl, output.binding) }}
+/* TODO: Initialize {{output.binding}} */
+cncPut_{{output.collName}}({{output.binding}}, {{ print_tag(args) }}ctx);
+{%- endcall -%}
+{% elif output.kind == 'STEP' -%}
+{%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}
+{%- set decl = g.stepFunctions[output.collName] -%}
+{%- call(args, ranges) render_io_nest(comment, output.tag, decl.tag) -%}
+cncPrescribe_{{output.collName}}({{ print_tag(args) }}ctx);
+{%- endcall -%}
+{% elif output.kind == 'IF' %}
+if ({{ output.cond }}) {
+{%- call render_indented(1) -%}
+{{ loop(output.refs) }}
+{%- endcall %}
+}
+{% elif output.kind == 'ELSE' -%}
+else {
+{%- call render_indented(loop.depth) -%}
+{{ loop(output.refs) }}
+{%- endcall -%}
+}
+{% else %}
+{% do exit("Unknown output type:" + (output|string)) %}
+{% endif -%}
+{% endfor -%}
+{% endmacro %}
+
+
+{% macro render_step_inputs(rangedIns) -%}
+{% for input in rangedIns %}
+{%- set comment = "Access \"" ~ input.binding ~ "\" inputs" -%}
+{%- set decl = g.itemDeclarations[input.collName] -%}
+{%- call(args, ranges) render_io_nest(comment, input.key, decl.key, zeroBased=True) -%}
+{%- set var = input.binding ~ print_indices(ranges) -%}
+/* TODO: Do something with {{var}} */
+{%- endcall %}
+{% endfor -%}
+{% endmacro %}

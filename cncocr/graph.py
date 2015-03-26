@@ -1,4 +1,4 @@
-from itertools import count, ifilter, imap
+from itertools import count, ifilter, imap, chain
 from sys import exit
 from string import strip
 # Compatibility for Python 2.6
@@ -6,16 +6,21 @@ from counter import Counter
 from ordereddict import OrderedDict
 
 
+def expandExpr(x):
+    return x and x.replace("@", "args->").replace("#", "ctx->")
+
+
 class CType(object):
     """C-style data type"""
     def __init__(self, typ, arrayTyp):
         self.baseType = typ.baseType
         self.stars = typ.get('stars', "")
-        self.isVecType = bool(arrayTyp.vecSuffix)
+        self.isVecType = bool(arrayTyp)
         if self.isVecType: self.stars += "*"
         self.isPtrType = bool(self.stars)
         self.ptrType = str(self) + ("" if self.isPtrType else "*")
-        self.vecSize = arrayTyp.arraySize
+        self.vecSizeRaw = arrayTyp and arrayTyp.arraySize
+        self.vecSize = expandExpr(self.vecSizeRaw)
     def __str__(self):
         return "{0} {1}".format(self.baseType, self.stars)
 
@@ -24,7 +29,7 @@ class CExpr(object):
     """C-style expression"""
     def __init__(self, expr):
         self.raw = expr.strip()
-        self.expanded = self.raw.replace("@", "args->").replace("#", "ctx->")
+        self.expanded = expandExpr(self.raw)
     def __str__(self):
         return self.expanded
 
@@ -65,18 +70,28 @@ class StepRef(object):
 
 
 class ItemRef(object):
-    def __init__(self, itemRef, binding):
+    def __init__(self, itemRef):
         self.kind = 'ITEM'
         self.collName = itemRef.collName
         self.key = map(makeTagComponent, tuple(itemRef.key))
-        self.binding = binding
+        self.binding = itemRef.binding
         self.keyRanges = tuple(x for x in self.key if x.isRanged)
+    def setBinding(self, b):
+        self.binding = b
+
+
+class RefBlock(object):
+    def __init__(self, block, makeRefs):
+        self.kind = block.kind
+        self.rawCond = block.cond.strip()
+        self.cond = expandExpr(self.rawCond)
+        self.refs = makeRefs(block.refs)
 
 
 class ItemDecl(object):
     def __init__(self, itemDecl):
         self.collName = itemDecl.collName
-        self.type = CType(itemDecl.type, itemDecl)
+        self.type = CType(itemDecl.type, itemDecl.vecSuffix)
         self.key = tuple(itemDecl.key)
         self.isSingleton = len(self.key) == 0
         self.isVirtual = False
@@ -115,24 +130,50 @@ def makeItemDecl(itemDecl):
 
 class StepFunction(object):
     def __init__(self, stepIO):
-        # Helper functions for dealing with item/step references
-        def getBinding(i): return i.binding or i.collName
-        def isItem(x): return x.kind == 'ITEM'
-        # Check all requrested bindings for repeats
-        inputs = list(stepIO.inputs)
-        outputs = list(stepIO.outputs)
-        allItems = inputs + filter(isItem, outputs)
         stepTag = list(stepIO.step.tag)
-        bindingsCounts = Counter(map(getBinding, allItems) + stepTag)
+        self.collName = stepIO.step.collName
+        self.tag = stepTag
+        self.inputItems = []
+        self.outputItems = []
         # Verify that tag bindings are unique
         if len(set(stepTag)) != len(stepTag):
             exit("Repeated ID in tag for declaration of step `{0}`: {1}".format(\
                     stepIO.step.collName, stepTag))
+        # Helper
+        def makeRefs(xs, itemsOutList):
+            def makeRefsHelp(xs):
+                prevCond = None
+                def makeRef(x):
+                    if (x.kind == 'ALWAYS'):
+                        return makeRefsHelp(x.refs)
+                    elif (x.kind in ['IF', 'ELSE', 'ALWAYS']):
+                        block = RefBlock(x, makeRefsHelp)
+                        if x.kind == 'ELSE':
+                            # XXX - I'd rather not use the C-specific '!' operator here
+                            block.cond = "!({0})".format(prevCond)
+                        prevCond = block.cond
+                        return [ block ]
+                    elif (x.kind == 'ITEM'):
+                        i = ItemRef(x)
+                        itemsOutList.append(i)
+                        return [ i ]
+                    elif (x.kind == 'STEP'):
+                        return [ StepRef(x) ]
+                    else:
+                        exit("Unknown component type: " + x.kind)
+                return list(chain(*map(makeRef, xs)))
+            return makeRefsHelp(xs)
+        # Process inputs and outputs
+        self.inputs = makeRefs(stepIO.inputs, self.inputItems)
+        self.outputs = makeRefs(stepIO.outputs, self.outputItems)
+        # Check all requrested bindings for repeats
+        allItems = list(chain(self.inputItems, self.outputItems))
+        def getItemName(i): return i.binding or i.collName
+        bindingsCounts = Counter(chain(stepTag, map(getItemName, allItems)))
         # Compute binding names (avoiding duplicates)
         bindings = set(bindingsCounts.keys())
-        itemBindings = {}
         for i in allItems:
-            binding = i.binding or i.collName
+            binding = getItemName(i)
             # handle collisions
             if bindingsCounts[binding] > 1:
                 f = lambda b: not b in bindings
@@ -141,18 +182,11 @@ class StepFunction(object):
                 binding = ifilter(f, imap(g, count())).next()
                 bindings.add(binding)
             # record the chosen (unique) binding
-            itemBindings[i] = binding
-        # Helper
-        def makeRef(x):
-            return ItemRef(x, itemBindings[x]) if isItem(x) else StepRef(x)
-        # Init fields
-        self.collName = stepIO.step.collName
-        self.tag = stepTag
-        self.inputs = map(makeRef, inputs)
-        self.outputs = map(makeRef, outputs)
-        self.inputCountExpr = " + ".join(["*".join([x.sizeExpr for x in i.keyRanges]) or "1" for i in self.inputs]) or "0"
-        inputColls = [i.collName for i in self.inputs]
-        self.inputColls = list(OrderedDict.fromkeys(inputColls))
+            i.setBinding(binding)
+        # build the step input count expression
+        self.inputCountExpr = " + ".join(["*".join([x.sizeExpr for x in i.keyRanges]) or "1" for i in self.inputItems]) or "0"
+        # ranged inputs
+        self.rangedInputItems = [ x for x in self.inputItems if x.keyRanges ]
 
 initNameRaw = '$init'
 finalizeNameRaw = '$finalize'

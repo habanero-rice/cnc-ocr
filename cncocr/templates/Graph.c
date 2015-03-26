@@ -8,26 +8,9 @@ void {{g.name}}_init({{g.name}}Args *args, {{g.name}}Ctx *ctx) {
     // TODO: Initialize these tag variables using args
     cncTag_t {{ g.initFunction.tag|join(", ") }};
 {% endif %}
-{#/* XXX - This code is copied from StepFunc.c */-#}
-{% for output in g.initFunction.outputs %}
-{%- call util.render_indented(1) -%}
-{% if output.kind == 'ITEM' -%}
-{%- set comment = "Put \"" ~ output.binding ~ "\" items" -%}
-{%- set decl = g.itemDeclarations[output.collName] -%}
-{%- call(args, ranges) util.render_io_nest(comment, output.key, decl.key) -%}
-{{ util.item_create_statement(decl, output.binding) }}
-/* TODO: Initialize {{output.binding}} */
-cncPut_{{output.collName}}({{output.binding}}, {% for x in args %}{{x}}, {% endfor %}ctx);
-{%- endcall -%}
-{% else -%}
-{%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}
-{%- set decl = g.stepFunctions[output.collName] -%}
-{%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag) -%}
-cncPrescribe_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
-{%- endcall -%}
-{% endif -%}
-{%- endcall %}
-{% endfor %}
+{% call util.render_indented(1) -%}
+{{ util.render_step_outputs(g.initFunction.outputs) }}
+{% endcall %}
     // Set finalizer function's tag
     {{g.name}}_await({{util.print_tag(g.finalizeFunction.tag)}}ctx);
 
@@ -39,7 +22,7 @@ cncPrescribe_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
 void {{stepfun.collName}}({{ util.print_tag(stepfun.tag, typed=True) 
         }}{{ util.print_bindings(stepfun.inputs, typed=True)
         }}{{g.name}}Ctx *ctx) {
-{% for input in stepfun.inputs -%}
+{% for input in stepfun.inputItems -%}
 {% if input.keyRanges %}
 {%- set comment = "Access \"" ~ input.binding ~ "\" inputs" -%}
 {%- set decl = g.itemDeclarations[input.collName] -%}

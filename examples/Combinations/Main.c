@@ -7,7 +7,7 @@ int cncMain(int argc, char *argv[]) {
 
     CombinationsArgs args;
 
-    // TODO: initialize graph context parameters
+    // initialize graph context parameters
     // u32 n, k;
     context->n = atoi(argv[1]);
     context->k = atoi(argv[2]);

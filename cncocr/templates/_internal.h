@@ -24,7 +24,7 @@ void {{g.name}}_init({{g.name}}Args *args, {{g.name}}Ctx *ctx);
 {% for stepfun in g.finalAndSteps %}
 void {{stepfun.collName}}({{
         util.print_tag(stepfun.tag, typed=True)}}{{
-        util.print_bindings(stepfun.inputs, typed=True)
+        util.print_bindings(stepfun.inputItems, typed=True)
         }}{{g.name}}Ctx *ctx);
 ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]);
 {% endfor %}

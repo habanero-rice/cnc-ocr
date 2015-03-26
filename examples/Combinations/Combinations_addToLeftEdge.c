@@ -4,13 +4,8 @@
  */
 void addToLeftEdge(cncTag_t row, cncTag_t col, CombinationsCtx *ctx) {
 
-    //
-    // OUTPUTS
-    //
-
     // Put "out" items
     u64 *out = cncCreateItem_cells();
-    /* TODO: Initialize out */
     *out = 1;
     cncPut_cells(out, row, col, ctx);
 

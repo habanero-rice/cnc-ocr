@@ -37,7 +37,7 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     {% endif %}
     s32 _edtSlot = {{ 1 if paramTag else 2 }}; MAYBE_UNUSED(_edtSlot);
     {#-/****** Set up input items *****/#}
-    {% for input in stepfun.inputs %}
+    {% for input in stepfun.inputItems %}
     {% if input.keyRanges -%}
     {#/*RANGED*/-#}
     {{ util.ranged_type(input) ~ input.binding }};
@@ -63,16 +63,14 @@ ocrGuid_t _cncStep_{{stepfun.collName}}(u32 paramc, u64 paramv[], u32 depc, ocrE
     {{ util.step_enter() }}
     // Call user-defined step function
     {{ util.log_msg("RUNNING", stepfun.collName, stepfun.tag) }}
-    {{stepfun.collName}}({{ util.print_tag(stepfun.tag) ~ util.print_bindings(stepfun.inputs) }}ctx);
+    {{stepfun.collName}}({{ util.print_tag(stepfun.tag) ~ util.print_bindings(stepfun.inputItems) }}ctx);
     {% if isFinalizer %}
     // Signal that the finalizer is done
     ocrEventSatisfy(ctx->_guids.finalizedEvent, NULL_GUID);
     {% endif %}
     // Clean up
-    {% for input in stepfun.inputs -%}
-    {% if input.keyRanges -%}
+    {% for input in stepfun.rangedInputItems -%}
     ocrDbDestroy(_block_{{input.binding}}.guid);
-    {% endif -%}
     {% endfor -%}
     {{ util.log_msg("DONE", stepfun.collName, stepfun.tag) }}
     {{ util.step_exit() }}
@@ -96,6 +94,7 @@ void cncPrescribe_{{stepfun.collName}}({{
     u64 *_tagBlockPtr;
     SIMPLE_DBCREATE(&_tagBlockGuid, (void**)&_tagBlockPtr, sizeof(_args));
     hal_memCopy(_tagBlockPtr, _args, sizeof(_args), 0);
+    ocrDbRelease(_tagBlockGuid);
     {% endif -%}
     {% else -%}
     u64 *_args = NULL;
@@ -134,16 +133,36 @@ void cncPrescribe_{{stepfun.collName}}({{
     {% endif -%}
 
     {#-/****** Set up input items *****/#}
-    {% for input in stepfun.inputs %}
-{%- set comment = "Set up \"" ~ input.binding ~ "\" input dependencies" -%}
+    {% set inputIsEnabled = [ true ] -%}
+    {%- call util.render_indented(1) -%}
+{% for input in stepfun.inputs recursive -%}
+{% if input.kind in ['IF', 'ELSE'] -%}
+if ({{ input.cond }}) {
 {%- call util.render_indented(1) -%}
-{%- call(var) util.render_tag_nest(comment, input) -%}
+{{ loop(input.refs) }}
+{%- endcall %}
+}
+{% do inputIsEnabled.append(false) -%}
+else {
+{%- call util.render_indented(1) -%}
+{{ loop(input.refs) }}
+{%- endcall %}
+}
+{% do inputIsEnabled.pop() -%}
+{% else -%}
+{%- set comment = "Set up \"" ~ input.binding ~ "\" input dependencies" -%}
+{%- call(var) util.render_tag_nest(comment, input, useTag=inputIsEnabled[-1]) -%}
+{%- if inputIsEnabled[-1] -%}
 cncGet_{{input.collName}}(
         {%- for k in input.key %}_i{{loop.index0}}, {% endfor -%}
          _stepGuid, _edtSlot++, DB_DEFAULT_MODE, ctx);
+{%- else -%}
+ocrAddDependence(NULL_GUID, _stepGuid, _edtSlot++, DB_DEFAULT_MODE);
+{%- endif -%}
 {%- endcall -%}
-{%- endcall %}
-    {% endfor %}
+{% endif %}
+{% endfor %}
+{% endcall %}
     ASSERT(_depc == _edtSlot);
     {{ util.log_msg("PRESCRIBED", stepfun.collName, stepfun.tag) }}
 }
