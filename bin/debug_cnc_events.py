@@ -39,10 +39,10 @@ with open(infile, 'r') as f:
 # Which steps are stuck?
 running = []
 print "*** STALLED STEPS ***"
-for collname, coll in steps.iteritems():
-    for tag, stepdeps in coll.iteritems():
+for collname, coll in sorted(steps.iteritems()):
+    for tag, stepdeps in sorted(coll.iteritems()):
         missing = []
-        for dep in stepdeps:
+        for dep in sorted(stepdeps):
             icoll, itag = dep
             if not itag in items[icoll]:
                 missing.append(dep)
@@ -54,5 +54,5 @@ for collname, coll in steps.iteritems():
 # Which steps were still running at exit?
 print 
 print "*** RUNNING STEPS ***"
-for collname, tag in running:
+for collname, tag in sorted(running):
     print collname, tag
