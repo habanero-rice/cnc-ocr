@@ -29,23 +29,34 @@ void {{groupfun.collName}}({{ util.print_tag(groupfun.tag, typed=True)
 {% set rangedOuts = groupfun.outputs|selectattr('tagRanges')|list -%}
 {% if isGroup and rangedOuts %}
 // DISTRIBUTE AMONG CHILDREN
+{% set userDefinedDistribution = tuningInfo.stepHasDistFn(output.collName) -%}
 {%- set inits = ["place_t **_kids = hc_get_current_place()->children;\n"] -%}
-{% do inits.append("int _count = "~output.tagRanges[0].sizeExpr~";\n") -%}
 {% do inits.append("int _nKids =  hc_get_current_place()->nChildren;\n") -%}
+{% if not userDefinedDistribution -%}
+{% do inits.append("int _count = "~output.tagRanges[0].sizeExpr~";\n") -%}
 {% do inits.append("int _chunk_size = _count / _nKids;\n") -%}
 {% do inits.append("int _chunk_rem = _count % _nKids;\n") -%}
 {% do inits.append("if (_chunk_rem > 0) { _chunk_size += 1; }\n") -%}
 {% do inits.append("int _kidI = 0;\n") -%}
+{% endif -%}{#/* not user-defined distribution */#}
+{% do inits.append("int _currKid = 0;\n") -%}
 {% set inits = "".join(inits) -%}
 {%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag, inits) -%}
-async (*_kids) IN({% for x in args %}{{x}}, {% endfor %}ctx) {
+{% if userDefinedDistribution -%}
+// User-defined distribution
+_currKid = {{ util.stepDistFn(decl, ranks="_nKids") }};
+{% endif -%}{#/* user-defined distribution */-#}
+async (_kids[_currKid]) IN({% for x in args %}{{x}}, {% endfor %}ctx) {
     cncPrescribeT_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
 }
+{% if not userDefinedDistribution -%}
+// Default distribution
 if (++_kidI > _chunk_size) {
     _kidI = 0;
     _kids++;
     if (--_chunk_rem == 0) { _chunk_size -= 1; }
 }
+{% endif -%}{#/* default distribution */#}
 {%- endcall -%}
 {% else -%}
 {%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag) -%}

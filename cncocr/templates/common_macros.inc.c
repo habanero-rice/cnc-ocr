@@ -157,11 +157,11 @@ for ({{idx}} = {{x.start}}; {{idx}} < {{x.end}}; {{idx}}++) {
 {{ g.name | upper }}_GLOBAL_CNC_CONTEXT
 {%- endmacro -%}
 
-{% macro stepDistFn(s) -%}
-{{ tuningInfo.stepDistFn(s.collName, coll2id(s.collName), "HCMPI_COMM_SIZE") }}
+{% macro stepDistFn(s, ranks="HCMPI_COMM_SIZE") -%}
+{{ tuningInfo.stepDistFn(s.collName, coll2id(s.collName), ranks) }}
 {%- endmacro -%}
 
-{% macro itemDistFn(i) -%}
-{{ tuningInfo.itemDistFn(i.collName, coll2id(i.collName), "HCMPI_COMM_SIZE") }}
+{% macro itemDistFn(i, ranks="HCMPI_COMM_SIZE") -%}
+{{ tuningInfo.itemDistFn(i.collName, coll2id(i.collName), ranks) }}
 {%- endmacro -%}
 

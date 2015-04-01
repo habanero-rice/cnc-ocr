@@ -224,6 +224,9 @@ class CnCTuningInfo(object):
     def isTuningGroup(self, x):
         return x.collName in self.tuningGroups.keys()
 
+    def itemHasDistFn(self, collName):
+        return bool(self.itemColls.get(collName))
+
     def itemDistFn(self, collName, collID, numRanks):
         entry = self.itemColls.get(collName)
         if entry:
@@ -234,8 +237,10 @@ class CnCTuningInfo(object):
             return  "{0} % {1}".format(distVar, numRanks)
 
     def getFnDecl(self, collName):
-        return self.g.stepFunctions.get(collName,
-                self.tuningGroups.get(collName))
+        return self.g.stepFunctions.get(collName, self.tuningGroups.get(collName))
+
+    def stepHasDistFn(self, collName):
+        return bool(self.stepColls.get(collName))
 
     def stepDistFn(self, collName, collID, numRanks):
         entry = self.stepColls.get(collName)

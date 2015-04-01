@@ -1,0 +1,34 @@
+////////////////////////////////////////////////////////////////////////////////
+// Row-based tuning
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// item collection distributions
+
+[ imageData: i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ uDiffData: iter, pos, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ gData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ rData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ ugData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ uData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group distributions
+
+( groupRD: i ): { ( i / ( #numTileRows / $RANKS ) ) % $RANKS }; // same as default (didn't really need this)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group affinities
+
+( $INIT: () ) ->
+    ( groupRD: $RANGE(1, #numTileRows+1) );
+
+( groupRD: i ) ->
+    ( uDiffCompute: $RANGE(1, #iters+1), i, $RANGE(1, #numTileCols+1) ),
+    ( gCompute: $RANGE(1, #iters+1), i, $RANGE(1, #numTileCols+1) ),
+    ( rCompute: $RANGE(1, #iters+1), i, $RANGE(1, #numTileCols+1) ),
+    ( ugCompute: $RANGE(1, #iters+1), i, $RANGE(1, #numTileCols+1) ),
+    ( uCompute: $RANGE(1, #iters+1), i, $RANGE(1, #numTileCols+1) );
+
