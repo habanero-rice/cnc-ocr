@@ -1,0 +1,30 @@
+////////////////////////////////////////////////////////////////////////////////
+// Row-based tuning
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// item collection distributions
+
+[ above : i, j ] : { i % $RANKS };    // Last row of tile above
+[ left  : i, j ] : { i % $RANKS };    // Last column of tile to the left
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group distributions
+
+( initAboveStep : tw, ntw ): { HCMPI_COMM_RANK };
+( initLeftStep  : th, nth ): { HCMPI_COMM_RANK };
+( groupSwRow: i ): { i % $RANKS }; // same as default (didn't really need this)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group affinities
+
+( $INIT: () ) ->
+    ( initAboveStep: #tw, #ntw ),
+    ( initLeftStep: #th, #nth ),
+    ( groupSwRow: $RANGE(0, #nth) );
+
+( groupSwRow: i ) ->
+    ( swStep: i, $RANGE(0, #ntw) );
+
