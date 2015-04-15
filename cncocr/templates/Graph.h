@@ -124,4 +124,14 @@ void {{g.name}}_init_tuning({{g.name}}Args *args, {{g.name}}Ctx *ctx);
 #define {{g.name}}_await cncPrescribe_{{g.finalizeFunction.collName}}
 {% endif %}
 
+{% for vstep in tuningInfo.vSteps.values() -%}
+// virtual step mapping
+#pragma hc continuable
+void cncPrescribeT_{{vstep.collName}}({{
+        util.print_tag(vstep.tag, typed=True) }}{{g.name}}Ctx *ctx);
+#pragma hc continuable
+void cncPrescribeR_{{vstep.collName}}({{
+        util.print_tag(vstep.tag, typed=True) }}{{g.name}}Ctx *ctx);
+{% endfor %}
+
 #endif /*{{defname}}*/

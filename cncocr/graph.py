@@ -72,6 +72,14 @@ class ItemDecl(object):
         self.isVirtual = False
 
 
+class StepMapping(object):
+    def __init__(self, vstep):
+        self.collName = vstep.collName
+        self.tag = tuple(x.strip() for x in vstep.tag)
+        self.mapTarget = vstep.targetCollName
+        self.mappedTag = tuple(x.strip() for x in vstep.tagFunc)
+
+
 class ItemMapping(ItemDecl):
     def __init__(self, itemDecl):
         super(ItemMapping, self).__init__(itemDecl)
@@ -212,6 +220,9 @@ class CnCTuningInfo(object):
             self.stepColls = {}
             self.tuningGroups = {}
         self.steplikes = g.finalAndSteps + self.tuningGroups.values()
+        # virtual steps
+        self.vSteps = dict([ (x.collName, StepMapping(x)) for x in ast.vSteps ])
+        print "vSteps = ", self.vSteps
         # verify
         for g in self.tuningGroups.values():
             for x in g.inputs:
@@ -237,7 +248,8 @@ class CnCTuningInfo(object):
             return  "{0} % {1}".format(distVar, numRanks)
 
     def getFnDecl(self, collName):
-        return self.g.stepFunctions.get(collName, self.tuningGroups.get(collName))
+        return (self.g.stepFunctions.get(collName, self.tuningGroups.get(collName))
+                or self.vSteps.get(collName))
 
     def stepHasDistFn(self, collName):
         return bool(self.stepColls.get(collName))

@@ -221,3 +221,16 @@ void {{g.name}}_launch({{g.name}}Args *args, {{g.name}}Ctx *ctx) {
 #endif
     }
 }
+
+{% for vstep in tuningInfo.vSteps.values() -%}
+// virtual step mapping
+void cncPrescribeT_{{vstep.collName}}({{
+        util.print_tag(vstep.tag, typed=True) }}{{g.name}}Ctx *ctx) {
+    cncPrescribeT_{{vstep.mapTarget}}({{util.print_tag(vstep.mappedTag) }}ctx);
+}
+void cncPrescribeR_{{vstep.collName}}({{
+        util.print_tag(vstep.tag, typed=True) }}{{g.name}}Ctx *ctx) {
+    cncPrescribeR_{{vstep.mapTarget}}({{util.print_tag(vstep.mappedTag) }}ctx);
+}
+{% endfor %}
+

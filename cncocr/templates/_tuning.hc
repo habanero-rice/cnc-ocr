@@ -26,7 +26,7 @@ void {{groupfun.collName}}({{ util.print_tag(groupfun.tag, typed=True)
 {%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}
 {%- set decl = tuningInfo.getFnDecl(output.collName) -%}
 {% set isGroup = tuningInfo.isTuningGroup(decl) -%}
-{% set rangedOuts = groupfun.outputs|selectattr('tagRanges')|list -%}
+{% set rangedOuts = output.tagRanges -%}
 {% if isGroup and rangedOuts %}
 // DISTRIBUTE AMONG CHILDREN
 {% set userDefinedDistribution = tuningInfo.stepHasDistFn(output.collName) -%}

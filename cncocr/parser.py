@@ -121,7 +121,7 @@ itemRef = Group("[" + kind('ITEM') + Optional(cVar('binding') + "@")
 
 ##################################################
 # ITEM COLLECTION DECLARATION
-# (specifies the data type,  and key shape)
+# (specifies the data type, and key shape)
 
 # mappings from virtual to concrete item collections can be
 # specified by a function name, or inline as a tag expression
@@ -161,6 +161,16 @@ stepRelation = Group(stepDecl('step') \
 
 
 ##################################################
+# VIRTUAL STEP COLLECTION DECLARATION
+# (allows reshaping step keys, used in tuning)
+
+stepMapping = cVar('targetCollName') + ":" + scalarTagExpr('tagFunc')
+vStepDecl = Group("(" + stepName('collName') + ":" + tagDecl('tag')
+                 + "=" + stepMapping('virtualMapping')
+                 + ")" + ";")
+
+
+##################################################
 # CNC GRAPH SPEC
 # (parses an entire spec file)
 
@@ -187,7 +197,11 @@ stepTuning = Group("(" + cVar('collName') + ":" + tagDecl('tag') + ")"
 tuningGroups = ZeroOrMore(tuningGroup)
 iCollsTuning = ZeroOrMore(itemTuning)
 sCollsTuning = ZeroOrMore(stepTuning)
+vSteps = ZeroOrMore(vStepDecl)
 
-cncTuningSpec = iCollsTuning('itemColls') + sCollsTuning('stepColls') + tuningGroups('groups')
+cncTuningSpec = (iCollsTuning('itemColls')
+                + sCollsTuning('stepColls')
+                + vSteps('vSteps')
+                + tuningGroups('groups'))
 cncTuningSpec.ignore(cppStyleComment)
 
