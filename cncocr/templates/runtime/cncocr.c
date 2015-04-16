@@ -10,6 +10,8 @@
 {% if logEnabled %}
 FILE *cncDebugLog;
 
+FILE *getCnCDebugLog() { return cncDebugLog; }
+
 {% endif -%}
 {% block arch_itemcoll_defs %}
 {% endblock arch_itemcoll_defs %}

@@ -3,8 +3,21 @@
 
 #include "{{g.name}}_internal.h"
 
+{% for s in tuningInfo.steplikes -%}
+{% if tuningInfo.stepHasDistFn(s.collName) -%}
+{%- set decl = tuningInfo.getFnDecl(s.collName) -%}
+static inline int _cncDistFn_{{s.collName}}({{ util.print_tag(s.tag, typed=True) 
+        }}int _ranks, {{g.name}}Ctx *ctx) {
+    return {{ util.stepDistFn(decl, ranks="_ranks") }};
+}
+{% endif -%}
+{% endfor %}
+
+#define CNC_NUM_RANKS _nKids
+
 #pragma hc continuable
 void {{g.name}}_init_tuning({{g.name}}Args *args, {{g.name}}Ctx *ctx) {
+    int _nKids = HCMPI_COMM_SIZE;
 {% for output in tuningInfo.initTuning.outputs %}
 {%- call util.render_indented(1) -%}
 {%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}
@@ -21,17 +34,26 @@ cncPrescribeR_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
 void {{groupfun.collName}}({{ util.print_tag(groupfun.tag, typed=True) 
         }}{{ util.print_bindings(groupfun.inputs, typed=True)
         }}{{g.name}}Ctx *ctx) {
+    int _nKids =  hc_get_current_place()->nChildren;
 {% for output in groupfun.outputs %}
-{%- call util.render_indented(1) -%}
 {%- set comment = "Prescribe \"" ~ output.collName ~ "\" steps" -%}
 {%- set decl = tuningInfo.getFnDecl(output.collName) -%}
 {% set isGroup = tuningInfo.isTuningGroup(decl) -%}
 {% set rangedOuts = output.tagRanges -%}
+{% call util.render_indented(1) %}
+{ // {{ output.collName }}
+{% call util.render_indented(1) %}
+{% for x in decl.tag -%}
+{% with tagExpX = output.tag[loop.index0] -%}
+{% if not tagExpX.isRanged -%}
+cncTag_t _{{x}} = {{ tagExpX.expr }};
+{% endif -%}
+{% endwith -%}
+{% endfor -%}
 {% if isGroup and rangedOuts %}
 // DISTRIBUTE AMONG CHILDREN
 {% set userDefinedDistribution = tuningInfo.stepHasDistFn(output.collName) -%}
 {%- set inits = ["place_t **_kids = hc_get_current_place()->children;\n"] -%}
-{% do inits.append("int _nKids =  hc_get_current_place()->nChildren;\n") -%}
 {% if not userDefinedDistribution -%}
 {% do inits.append("int _count = "~output.tagRanges[0].sizeExpr~";\n") -%}
 {% do inits.append("int _chunk_size = _count / _nKids;\n") -%}
@@ -43,11 +65,11 @@ void {{groupfun.collName}}({{ util.print_tag(groupfun.tag, typed=True)
 {% set inits = "".join(inits) -%}
 {%- call(args, ranges) util.render_io_nest(comment, output.tag, decl.tag, inits) -%}
 {% if userDefinedDistribution -%}
-// User-defined distribution
-_currKid = {{ util.stepDistFn(decl, ranks="_nKids") }};
+// User-defined distribution {{ decl.collName }}
+_currKid = _cncDistFn_{{decl.collName}}({{ util.print_tag(decl.tag, prefix="_") }}_nKids, ctx);
 {% endif -%}{#/* user-defined distribution */-#}
-async (_kids[_currKid]) IN({% for x in args %}{{x}}, {% endfor %}ctx) {
-    cncPrescribeT_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
+async (_kids[_currKid]) IN({% for x in decl.tag %}_{{x}}, {% endfor %}ctx) {
+    cncPrescribeT_{{output.collName}}({% for x in decl.tag %}_{{x}}, {% endfor %}ctx);
 }
 {% if not userDefinedDistribution -%}
 // Default distribution
@@ -66,14 +88,15 @@ async (hc_get_child_place()->tuning_place)
 {%- else -%}
 // RELEASE HERE
 async (hc_get_current_place())
-{%- endif %} IN({% for x in args %}{{x}}, {% endfor %}ctx) {
-    cncPrescribeT_{{output.collName}}({% for x in args %}{{x}}, {% endfor %}ctx);
+{%- endif %} IN({% for x in decl.tag %}_{{x}}, {% endfor %}ctx) {
+    cncPrescribeT_{{output.collName}}({% for x in decl.tag %}_{{x}}, {% endfor %}ctx);
 }
 {%- endcall -%}
 {% endif -%}
 {%- endcall %}
+}
+{%- endcall %}
 {% endfor %}
-
 }
 {% endfor %}
 

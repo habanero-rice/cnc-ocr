@@ -84,6 +84,7 @@ void cncPrescribeT_{{stepfun.collName}}({{
     {% endif %}
     {% endfor %}
 
+    {{ util.log_msg("PRESCRIBED", stepfun.collName, stepfun.tag) }}
     // TODO - refactor into an _internal helper function (no rank check)
     {% set ddfList = stepfun.inputs | join(", ", attribute='binding') -%}
     {% set inDDFs = (ddfList ~ ", ") if ddfList else "" -%}
@@ -115,7 +116,6 @@ void cncPrescribeT_{{stepfun.collName}}({{
 #endif
         {% endif %}
     }
-    {{ util.log_msg("PRESCRIBED", stepfun.collName, stepfun.tag) }}
 }
 
 #pragma hc continuable

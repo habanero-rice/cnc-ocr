@@ -103,6 +103,7 @@ static __inline__ void CNC_CREATE_ITEM(cncHandle_t *handle, void **ptr, int ssiz
 ********* CNC DEBUG LOGGING ********
 \**********************************/
 extern FILE *cncDebugLog;
+FILE *getCnCDebugLog();
 
 {% endif -%}
 #endif /*{{defname}}*/

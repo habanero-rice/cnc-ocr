@@ -10,9 +10,16 @@
 
 {#/****** Indent calling block to the specified level ******/#}
 {% macro log_msg(msgType, collName, tag) -%}
-    LOG_INFO("{{msgType}} {{collName}} @ {{
-            (['%ld'] * tag|count)|join(', ') if tag else 0 }}\n"{{
+{% if logEnabled %}
+    fprintf(getCnCDebugLog(), "{{msgType}} {{collName}} @ {{
+            (['%d'] * tag|count)|join(', ') if tag else 0 }}\n"{{
             ([""] + tag|list)|join(', ') }});
+    fflush(getCnCDebugLog());
+{% else %}
+    LOG_INFO("{{msgType}} {{collName}} @ {{
+            (['%d'] * tag|count)|join(', ') if tag else 0 }}\n"{{
+            ([""] + tag|list)|join(', ') }});
+{% endif %}
 {%- endmacro %}
 
 {#/****** Indent calling block to the specified level ******/#}

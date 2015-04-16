@@ -3,6 +3,11 @@ from collections_27 import Counter, OrderedDict
 from sys import exit
 from string import strip
 
+def expandExpr(x, collID="0", numRanks="CNC_NUM_RANKS"):
+    return (x.strip()
+            .replace("@", "args->").replace("#", "ctx->")
+            .replace("$ID", collID).replace("$RANKS", numRanks))
+
 class CType(object):
     """C-style data type"""
     def __init__(self, typ):
@@ -18,7 +23,7 @@ class CExpr(object):
     """C-style expression"""
     def __init__(self, expr):
         self.raw = expr.strip()
-        self.expanded = self.raw.replace("@", "args->").replace("#", "ctx->")
+        self.expanded = expandExpr(self.raw)
     def __str__(self):
         return self.expanded
 
@@ -60,7 +65,7 @@ class ItemRef(object):
         if self.raw_condition:
             assert not self.keyRanges, "Conditions on scalar inputs only"
             self.raw_condition = self.raw_condition.strip()
-            self.condition = self.raw_condition.replace("@", "args->").replace("#", "ctx->")
+            self.condition = expandExpr(self.raw_condition)
 
 
 class ItemDecl(object):
@@ -201,8 +206,7 @@ class CnCGraph(object):
 class DistFn(object):
     def __init__(self, expr, collID, numRanks):
         self.raw = expr.strip()
-        self.expanded = self.raw.replace("$ID", collID).replace("$RANKS", numRanks)\
-                                .replace("@", "args->").replace("#", "ctx->")
+        self.expanded = expandExpr(self.raw, collID, numRanks)
     def __str__(self):
         return self.expanded
 
@@ -215,14 +219,14 @@ class CnCTuningInfo(object):
             self.tuningGroups = OrderedDict(
                     (x.step.collName, StepFunction(x)) for x in ast.groups)
             self.initTuning = self.tuningGroups.pop(initNameRaw)
+            self.vSteps = dict([ (x.collName, StepMapping(x)) for x in ast.vSteps ])
         else:
             self.itemColls = {}
             self.stepColls = {}
             self.tuningGroups = {}
+            self.vSteps = {}
         self.steplikes = g.finalAndSteps + self.tuningGroups.values()
         # virtual steps
-        self.vSteps = dict([ (x.collName, StepMapping(x)) for x in ast.vSteps ])
-        print "vSteps = ", self.vSteps
         # verify
         for g in self.tuningGroups.values():
             for x in g.inputs:

@@ -1,0 +1,55 @@
+////////////////////////////////////////////////////////////////////////////////
+// Row-based tuning
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// item collection distributions
+
+[ imageData: i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ uDiffData: iter, pos, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ gData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ rData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ ugData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+[ uData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group distributions
+
+( groupRow    : r, h       ): { r % $RANKS }; //chunked row distribution over nodes
+( groupRowCol : r, h, c, w ): { c % $RANKS }; //chunked col distribution over sockets
+
+
+////////////////////////////////////////////////////////////////////////////////
+// compute group affinities
+
+( rdStepsX: k, i, j, r, h, c, w, b, d  = rdSteps: (r * h) + i, (c * w) + j, (b * d) + k );
+
+( $INIT: () ) ->
+    ( groupRow: $RANGE(0, (#numTileRows / $RANKS)), (#numTileRows / $RANKS) ); // block up the rows among nodes
+
+( groupRow: r, h ) ->
+    ( groupRowCol: r, h, $RANGE(0, (#numTileCols / $RANKS)), (#numTileCols / $RANKS) ); // inside a node, block up the columns among sockets
+
+( groupRowCol: r, h, c, w ) ->
+    ( groupRowColIter: r, h, c, w, $RANGE(0, (#iters / ((w / 2) + (w % 2)))), (#iters / ((w / 2) + (w % 2))) ); //inside a socket, block up the iteration space according to pyramid height; pyramid height = (w/2) + (w%2)
+
+( groupRowColIter: r, h, c, w, b, d ) ->
+    ( groupPyramid: r, h, c, w, b, d ),           // from the iteration block, carve out a pyramid first
+    ( groupPyramidComplement: r, h, c, w, b, d ); // then finish up with the rest of the block
+
+( groupPyramid: r, h, c, w, b, d ) ->
+    (  rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(_k, w - _k), r, h, c, w, b, d ); 
+
+( groupPyramidComplement: r, h, c, w, b, d ) ->
+    ( rdStepsX: $RANGE(0, d), $RANGE(0, _k), $RANGE(0, w), r, h, c, w, b, d ),
+    ( rdStepsX: $RANGE(0, d), $RANGE(h - _k, h), $RANGE(0, w), r, h, c, w, b, d ),
+    ( rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(0, _k), r, h, c, w, b, d ),
+    ( rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(w - _k, w), r, h, c, w, b, d );
+
+( rdSteps: i, j, k ) ->
+    ( uDiffCompute: k+1, i+1, j+1 ),
+    ( gCompute:     k+1, i+1, j+1 ),
+    ( rCompute:     k+1, i+1, j+1 ),
+    ( ugCompute:    k+1, i+1, j+1 ),
+    ( uCompute:     k+1, i+1, j+1 );
