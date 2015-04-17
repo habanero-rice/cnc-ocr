@@ -15,6 +15,8 @@ int main(int argc, char **argv) {
     ctx->blockSize = atoi(argv[3]);
     ctx->iters = atoi(argv[4]);
 
+fprintf(stderr, "Matrix size: %d x %d\n", ctx->numTileRows * ctx->blockSize, ctx->numTileCols * ctx->blockSize);
+
     ctx->sigma = 0.05;
     ctx->sigma2 = ctx->sigma * ctx->sigma;
     ctx->lambda = 0.065;

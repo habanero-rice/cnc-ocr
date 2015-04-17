@@ -14,38 +14,31 @@
 [ uData: iter, i, j ] : { ( i / ( #numTileRows / $RANKS ) ) % $RANKS };
 
 ////////////////////////////////////////////////////////////////////////////////
-// compute group distributions
-
-( groupRow    : r, h       ): { r % $RANKS }; //chunked row distribution over nodes
-( groupRowCol : r, h, c, w ): { c % $RANKS }; //chunked col distribution over sockets
-
-
-////////////////////////////////////////////////////////////////////////////////
 // compute group affinities
 
-( rdStepsX: k, i, j, r, h, c, w, b, d  = rdSteps: (r * h) + i, (c * w) + j, (b * d) + k );
+( rdStepsX: k, i, j, r, h, c, w, b, s  = rdSteps: r + i, c + j, (b * s) + k );
 
 ( $INIT: () ) ->
-    ( groupRow: $RANGE(0, (#numTileRows / $RANKS)), (#numTileRows / $RANKS) ); // block up the rows among nodes
+    ( groupRow: $RANGE(0, $RANKS), $RANKS ); // block up the rows among nodes
 
-( groupRow: r, h ) ->
-    ( groupRowCol: r, h, $RANGE(0, (#numTileCols / $RANKS)), (#numTileCols / $RANKS) ); // inside a node, block up the columns among sockets
+( groupRow: r, ranks ) ->
+    ( groupRowCol: ((r < (#numTileRows % ranks)) ? (r * ((#numTileRows / ranks) + 1)) : (((#numTileRows % ranks) * ((#numTileRows / ranks) + 1)) + ((r - (#numTileRows % ranks)) * (#numTileRows / ranks)))), ((#numTileRows / ranks) + (r < (#numTileRows % ranks))), $RANGE(0, $RANKS), $RANKS ); // inside a node, block up the columns among sockets
 
-( groupRowCol: r, h, c, w ) ->
-    ( groupRowColIter: r, h, c, w, $RANGE(0, (#iters / ((w / 2) + (w % 2)))), (#iters / ((w / 2) + (w % 2))) ); //inside a socket, block up the iteration space according to pyramid height; pyramid height = (w/2) + (w%2)
+( groupRowCol: r, h, c, ranks ) ->
+    ( groupRowColIter: r, h, ((c < (#numTileCols % ranks)) ? (c * ((#numTileCols / ranks) + 1)) : (((#numTileCols % ranks) * ((#numTileCols / ranks) + 1)) + ((c - (#numTileCols % ranks)) * (#numTileCols / ranks)))), ((#numTileCols / ranks) + (c < (#numTileCols % ranks))), $RANGE(0, ((#iters/_d) + ((#iters % _d) > 0))), ((_w/2)+(_w%2))); //inside a socket, block up the iteration space according to pyramid height; pyramid height = (w/2) + (w%2)
 
-( groupRowColIter: r, h, c, w, b, d ) ->
-    ( groupPyramid: r, h, c, w, b, d ),           // from the iteration block, carve out a pyramid first
-    ( groupPyramidComplement: r, h, c, w, b, d ); // then finish up with the rest of the block
+( groupRowColIter: r, h, c, w, b, d) ->
+    ( groupPyramid: r, h, c, w, b, ((((#iters % d) > 0) && ((b + 1) == ((#iters/d) + ((#iters%d) > 0)))) ? (#iters % d) : d), d ),           // from the iteration block, carve out a pyramid first
+    ( groupPyramidComplement: r, h, c, w, b, ((((#iters % d) > 0) && ((b + 1) == ((#iters/d) + ((#iters%d) > 0)))) ? (#iters % d) : d), d ); // then finish up with the rest of the block
 
-( groupPyramid: r, h, c, w, b, d ) ->
-    (  rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(_k, w - _k), r, h, c, w, b, d ); 
+( groupPyramid: r, h, c, w, b, d, s ) ->
+    (  rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(_k, w - _k), r, h, c, w, b, s ); 
 
-( groupPyramidComplement: r, h, c, w, b, d ) ->
-    ( rdStepsX: $RANGE(0, d), $RANGE(0, _k), $RANGE(0, w), r, h, c, w, b, d ),
-    ( rdStepsX: $RANGE(0, d), $RANGE(h - _k, h), $RANGE(0, w), r, h, c, w, b, d ),
-    ( rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(0, _k), r, h, c, w, b, d ),
-    ( rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(w - _k, w), r, h, c, w, b, d );
+( groupPyramidComplement: r, h, c, w, b, d, s ) ->
+    ( rdStepsX: $RANGE(0, d), $RANGE(0, _k), $RANGE(0, w), r, h, c, w, b, s ),
+    ( rdStepsX: $RANGE(0, d), $RANGE(h - _k, h), $RANGE(0, w), r, h, c, w, b, s ),
+    ( rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(0, _k), r, h, c, w, b, s ),
+    ( rdStepsX: $RANGE(0, d), $RANGE(_k, h - _k), $RANGE(w - _k, w), r, h, c, w, b, s );
 
 ( rdSteps: i, j, k ) ->
     ( uDiffCompute: k+1, i+1, j+1 ),
@@ -53,3 +46,4 @@
     ( rCompute:     k+1, i+1, j+1 ),
     ( ugCompute:    k+1, i+1, j+1 ),
     ( uCompute:     k+1, i+1, j+1 );
+
