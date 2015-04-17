@@ -68,12 +68,12 @@ cncTag_t _{{x}} = {{ tagExpX.expr }};
 // User-defined distribution {{ decl.collName }}
 _currKid = _cncDistFn_{{decl.collName}}({{ util.print_tag(decl.tag, prefix="_") }}_nKids, ctx);
 {% endif -%}{#/* user-defined distribution */-#}
-async (_kids[_currKid]) IN({% for x in decl.tag %}_{{x}}, {% endfor %}ctx) {
+async (_kids[_currKid]->tuning_place) IN({% for x in decl.tag %}_{{x}}, {% endfor %}ctx) {
     cncPrescribeT_{{output.collName}}({% for x in decl.tag %}_{{x}}, {% endfor %}ctx);
 }
 {% if not userDefinedDistribution -%}
 // Default distribution
-if (++_kidI > _chunk_size) {
+if (++_kidI >= _chunk_size) {
     _kidI = 0;
     _kids++;
     if (--_chunk_rem == 0) { _chunk_size -= 1; }
