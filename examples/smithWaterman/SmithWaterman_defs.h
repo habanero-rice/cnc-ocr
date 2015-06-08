@@ -27,4 +27,33 @@ typedef struct SmithWatermanArguments {
     s32 tw, th, ntw, nth;
 } SmithWatermanArgs;
 
+static inline int wave_dist(int i, int j, int N, int P) {
+  const int x = i + j + 1;
+  const int diag_length = (x < N) ? x : (x - ((x - N) * 2));
+  const int c = diag_length / P;
+  const int r = diag_length % P;
+  int p = (diag_length <= P)
+            ? (
+                (x < N)
+                  ? (i)
+                  : (N - (j + 1))
+              )
+            : (
+                (x < N)
+                  ? (
+                      (i > ((r * c) + r))
+                        ? (((i - ((r * c) + r)) / c) + r)
+                        : (i / (c + 1))
+                    )
+                  : (
+                      ((N - (j + 1)) > ((r * c) + r))
+                        ? ((((N - (j + 1)) - ((r * c) + r)) / c) + r)
+                        : ((N - (j + 1)) / (c + 1))
+                    )
+              );
+  assert(0 <= p);
+  assert(p < P);
+  return p;
+}
+
 #endif /*_CNCOCR_SMITHWATERMAN_TYPES_H_*/
