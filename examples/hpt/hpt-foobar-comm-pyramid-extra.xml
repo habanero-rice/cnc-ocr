@@ -7,7 +7,7 @@
         <place num="1" type="cache"> <!-- socket with common L3 in each -->
         <place num="1" type="cache"> <!-- socket with common L3 in each -->
         <place num="1" type="cache"> <!-- socket with common L3 in each -->
-            <place num="8" type="cache"> <!-- 7 L2/L1 cache per socket -->
+            <place num="7" type="cache"> <!-- 7 L2/L1 cache per socket -->
                 <worker num="1"/>
             </place>
         </place>
