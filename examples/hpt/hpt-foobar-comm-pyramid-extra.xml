@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!DOCTYPE HPT SYSTEM "hpt.dtd">
+
+<HPT version="0.1" info="an HPT (for comm worker enabled) for Foobar, 2 sockets, 8 cores per socket, 2-way hyperthreaded = 32 hw threads">
+    <place num="1" type="mem">
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+            <place num="8" type="cache"> <!-- 7 L2/L1 cache per socket -->
+                <worker num="1"/>
+            </place>
+        </place>
+        </place>
+        </place>
+        </place>
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+        <place num="1" type="cache"> <!-- socket with common L3 in each -->
+            <place num="8" type="cache"> <!-- 8 L2/L1 cache per socket -->
+                <worker num="1"/> 
+            </place>
+        </place>
+        </place>
+        </place>
+        </place>
+        <worker num="1" type="comm"/> <!-- comm worker -->
+    </place>
+</HPT>
