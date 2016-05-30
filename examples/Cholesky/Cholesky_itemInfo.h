@@ -3,9 +3,11 @@
 
 #include "Cholesky.h"
 
+#define cncItemSanitizeFn_Lkji NULL
 static inline int cncItemSize_Lkji(CholeskyCtx *ctx) {
     return sizeof(double) * ctx->tileSize * ctx->tileSize;
 }
+#define cncItemSanitizeFn_results NULL
 static inline int cncItemSize_results(CholeskyCtx *ctx) {
     return cncItemSize_Lkji(ctx);
 }
